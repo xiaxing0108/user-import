@@ -78,10 +78,10 @@ public class UserImportService {
                 if(cellValue.equals("操作单号")) {
                     orderSaleNoIndex = index;
                 }
-                if(cellValue.equals("出发机场三字码")) {
+                if(cellValue.equals("dport")) {
                     airPortCodeIndex = index;
                 }
-                if(cellValue.equals("使用日期")) {
+                if(cellValue.equals("takeofftime")) {
                     airStartTimeIndex = index;
                 }
                 if(cellValue.equals("出行人姓名")) {
@@ -196,15 +196,15 @@ public class UserImportService {
                     urlParams.setSupplierCode(supplierCode);
                     urlParams.setServiceId("1");
                     Cell orderDateCell = row.getCell(airStartTimeIndex);
-                    String orderDate = "" ;
-                    if(orderDateCell.getCellTypeEnum()==CellType.NUMERIC) {
+                    String orderDate = orderDateCell.getStringCellValue();
+                    /*if(orderDateCell.getCellTypeEnum()==CellType.NUMERIC) {
                         if(DateUtil.isCellDateFormatted(orderDateCell)) {
                             Date date = orderDateCell.getDateCellValue();
                             orderDate = DateUtils.dateToString(date,"yyyy/MM/dd HH:mm:ss");
                         }
                     }else{
                         orderDate = orderDateCell.getStringCellValue().trim().substring(0,16).replaceAll("-","/");
-                    }
+                    }*/
                     urlParams.setAirStartTime(orderDate);
                     if(airNoIndex>=0) {
                         urlParams.setAirNo(row.getCell(airNoIndex).getStringCellValue().trim());
@@ -420,16 +420,16 @@ public class UserImportService {
                     errorList.add(errorMap);
                     continue;
                 }
-                if(StringUtils.isEmpty(urlParams.getAirStartTime())) {
+                /*if(StringUtils.isEmpty(urlParams.getAirStartTime())) {
                     errorMap.put(urlParams.getOrderSaleNo(),"航班日期不能为空!");
                     errorList.add(errorMap);
                     continue;
-                }
-                if(StringUtils.isEmpty(urlParams.getAirPortCode())) {
+                }*/
+                /*if(StringUtils.isEmpty(urlParams.getAirPortCode())) {
                     errorMap.put(urlParams.getOrderSaleNo(),"航站站点编码不能为空!");
                     errorList.add(errorMap);
                     continue;
-                }
+                }*/
                 if(!ValidateUtils.checkPhone(phone)) {
                     errorMap.put(urlParams.getOrderSaleNo(),"手机号码格式不正确");
                     errorList.add(errorMap);
@@ -457,6 +457,17 @@ public class UserImportService {
                                 paramsMap.put("certNo",certInfo[1]);
                             }
                             //userImportDao.insertCertInfo(paramsMap);
+                            paramsMapList.add(paramsMap);
+                        }
+                    }
+                }else{
+                    String certInfo = urlParams.getCustomName();
+                    if(!StringUtils.isEmpty(certInfo)) {
+                        String[] certInfoArr = certInfo.split(",");
+                        for (int i = 0; i < certInfoArr.length; i++) {
+                            Map<String,Object> paramsMap = new HashMap<>();
+                            paramsMap.put("orderNo",urlParams.getOrderNo());
+                            paramsMap.put("customName",certInfoArr[i]);
                             paramsMapList.add(paramsMap);
                         }
                     }
