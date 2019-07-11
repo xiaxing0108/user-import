@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//ibatis.apache.org//DTD Mapper 3.0//EN"
+        "http://ibatis.apache.org/dtd/ibatis-3-mapper.dtd">
+
+<mapper namespace="com.user.userimport.dao.UserImportDao">
+
+    <select id="getList" resultType="java.util.HashMap" parameterType="java.util.Map">
+        SELECT
+            orderId,
+            orderNo,
+            airStartTime,
+            supplierCode,
+            ( SELECT supplierName FROM tb_supplier WHERE tb_supplier.supplierCode= tb_order.supplierCode ) AS supplierName,
+            airPortCode,
+            ( SELECT airPortCodeNote FROM tb_airPort WHERE tb_airPort.airPortCode= tb_order.airPortCode ) AS airPortCodeNote,
+            serviceId,
+            ( SELECT serviceName FROM tb_service WHERE tb_service.serviceId= tb_order.serviceId ) AS serviceName,
+            customName,
+            airNo,
+            accountBelong,
+            addTime,
+            startOrderTime,
+            finishOrderTime,
+            orderStatus,
+            deleteOrderStatus,
+            closeOrderStatus,
+            closeOrderReason,
+            closeOrderTime,
+            inputCertNoTime,
+            finishContactTime,
+            inputSiteNoTime
+        FROM
+            tb_order
+        where 1=1
+        <if test="airNo != null and airNo!=''">
+            and airNo = #{airNo}
+        </if>
+        <if test="orderSaleNo!=null and orderSaleNo!=''">
+            and orderSaleNo like concat('%',#{orderSaleNo},'%')
+        </if>
+        <if test="accountBelong!=null and accountBelong!='' ">
+            and accountBelong = #{accountBelong}
+        </if>
+        <if test="customName!=null and customName!=''">
+            and customName = #{customName}
+        </if>
+
+        AND (deleteOrderStatus=0 or deleteOrderStatus is NULL)
+        AND (closeOrderStatus=0 or closeOrderStatus is NULL)
+        AND DATEDIFF( SECOND, airStartTime, GETDATE() ) <![CDATA[<]]> 0
+
+        order by airStartTime desc
+    </select>
+
+    <select id="getUserRight" resultType="java.util.HashMap">
+        select a.airPortCode,b.groupLevel from tb_admin a left join tb_group b on a.adminGroupId = b.groupId where a.adminName = #{adminName}
+    </select>
+
+    <insert id="insertOrder" parameterType="com.user.userimport.pojo.UrlParams" useGeneratedKeys="true" keyProperty="orderId">
+        insert into tb_order
+        (orderNo,orderSaleNo,supplierCode,airPortCode,airNo,siteNo,serviceId,certNo,
+        customName,customTel,airStartTime,orderMark,addType,orderSort,orderStatus,addTime,inputCertNoTime,inputSiteNoTime)
+        values
+        (#{orderNo},#{orderSaleNo},#{supplierCode},#{airPortCode},#{airNo},#{siteNo},#{serviceId},#{certNo},#{customName},#{customTel},
+        #{airStartTime},#{orderMark},2,100,#{orderStatus},getDate(),#{inputCertNoTime},#{inputSiteNoTime})
+    </insert>
+
+    <insert id="insertCertInfo" parameterType="java.util.HashMap" useGeneratedKeys="true">
+        insert into tb_certInfo
+        (orderNo,customName,certNo)
+        values
+        (#{orderNo},#{customName},#{certNo})
+    </insert>
+
+    <select id="existsOrder" resultType="java.lang.Integer">
+        select orderId from tb_order where orderSaleNo = #{orderSaleNo}
+    </select>
+
+
+</mapper>

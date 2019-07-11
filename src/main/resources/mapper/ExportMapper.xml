@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//ibatis.apache.org//DTD Mapper 3.0//EN"
+        "http://ibatis.apache.org/dtd/ibatis-3-mapper.dtd">
+
+<mapper namespace="com.user.userimport.dao.ExportDao">
+
+    <select id="getCensusData" resultType="java.util.HashMap">
+        select convert(char(8),a.addTime,112) addTime,
+        count(*) total
+        from tb_order a
+        <!--TODO 正式使用换成right join-->
+        left join tb_certInfo b
+        on a.orderNo = b.orderNo
+        where DATEDIFF(month, a.addTime, #{queryDate}) = 0
+        and a.addType = 2
+        and a.supplierCode = #{supplierCode}
+        and a.airPortCode = #{airPortCode}
+        <if test="checkOrderStatus!=null">
+            and b.checkOrderStatus = #{checkOrderStatus}
+        </if>
+        <if test="orderStatus!=null">
+            and a.orderStatus = #{orderStatus}
+        </if>
+        group by convert(char(8),a.addTime,112)
+    </select>
+
+    <select id="uncheckList" resultType="java.util.HashMap">
+        SELECT
+            a.customName,
+            b.airStartTime,
+            b.orderSaleNo,
+            c.airPortCodeNote,
+            b.customTel,
+            b.orderMark
+        FROM
+            tb_certInfo a
+            LEFT JOIN tb_order b ON a.orderNo = b.orderNo
+            LEFT JOIN tb_airPort c ON b.airPortCode = c.airPortCode
+        WHERE
+            b.checkOrderStatus IS NULL
+        AND
+            DATEDIFF(month,b.airStartTime,#{queryDate}) = 0
+        AND
+            b.addType = 2
+        ORDER BY
+            b.airStartTime
+    </select>
+
+    <select id="PSTList" resultType="java.util.HashMap">
+        SELECT
+            b.total,
+            c.adminRealName,
+            b.formatTime
+        FROM
+            (
+        SELECT
+            count( * ) total,
+            accountBelong,
+            formatTime
+        FROM
+            (
+        SELECT
+            accountBelong,
+            CONVERT ( VARCHAR ( 100 ), finishOrderTime, 112 ) formatTime
+        FROM
+            tb_order
+        WHERE
+            DATEDIFF( MONTH, finishOrderTime, #{queryDate} ) = 0
+            AND supplierCode = #{supplierCode}
+            AND orderStatus = 3
+            AND airPortCode = #{airPortCode}
+            AND addType = 2
+            ) a
+        GROUP BY
+            accountBelong,
+            formatTime
+            ) b
+            LEFT JOIN tb_admin c ON b.accountBelong = c.adminName
+    </select>
+
+</mapper>
