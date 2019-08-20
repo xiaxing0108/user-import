@@ -59,10 +59,10 @@
     <insert id="insertOrder" parameterType="com.user.userimport.pojo.UrlParams" useGeneratedKeys="true" keyProperty="orderId">
         insert into tb_order
         (orderNo,orderSaleNo,supplierCode,airPortCode,airNo,siteNo,serviceId,certNo,
-        customName,customTel,airStartTime,orderMark,addType,orderSort,orderStatus,addTime,inputCertNoTime,inputSiteNoTime)
+        customName,customTel,airStartTime,orderMark,addType,orderSort,orderStatus,addTime,inputCertNoTime,inputSiteNoTime,terminal)
         values
         (#{orderNo},#{orderSaleNo},#{supplierCode},#{airPortCode},#{airNo},#{siteNo},#{serviceId},#{certNo},#{customName},#{customTel},
-        #{airStartTime},#{orderMark},2,100,#{orderStatus},getDate(),#{inputCertNoTime},#{inputSiteNoTime})
+        #{airStartTime},#{orderMark},2,100,#{orderStatus},getDate(),#{inputCertNoTime},#{inputSiteNoTime},#{terminal})
     </insert>
 
     <insert id="insertCertInfo" parameterType="java.util.HashMap" useGeneratedKeys="true">
@@ -74,6 +74,10 @@
 
     <select id="existsOrder" resultType="java.lang.Integer">
         select orderId from tb_order where orderSaleNo = #{orderSaleNo}
+    </select>
+
+    <select id="existsXccxOrder" resultType="java.lang.Integer">
+        select orderId from tb_order where airStartTime = #{airStartTime} and customTel = #{phone}
     </select>
 
 

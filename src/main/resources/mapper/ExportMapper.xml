@@ -5,23 +5,24 @@
 <mapper namespace="com.user.userimport.dao.ExportDao">
 
     <select id="getCensusData" resultType="java.util.HashMap">
-        select convert(char(8),a.addTime,112) addTime,
+        select convert(char(8),a.airStartTime,112) addTime,
         count(*) total
         from tb_order a
-        <!--TODO 正式使用换成right join-->
-        left join tb_certInfo b
+        right join tb_certInfo b
         on a.orderNo = b.orderNo
-        where DATEDIFF(month, a.addTime, #{queryDate}) = 0
+        where DATEDIFF(month, a.airStartTime, #{queryDate}) = 0
         and a.addType = 2
         and a.supplierCode = #{supplierCode}
         and a.airPortCode = #{airPortCode}
         <if test="checkOrderStatus!=null">
-            and b.checkOrderStatus = #{checkOrderStatus}
+            and a.checkOrderStatus = #{checkOrderStatus}
+            and a.closeOrderStatus is null
         </if>
         <if test="orderStatus!=null">
             and a.orderStatus = #{orderStatus}
         </if>
-        group by convert(char(8),a.addTime,112)
+        and (a.deleteOrderStatus != 1 or a.deleteOrderStatus is null)
+        group by convert(char(8),a.airStartTime,112)
     </select>
 
     <select id="uncheckList" resultType="java.util.HashMap">
@@ -37,11 +38,17 @@
             LEFT JOIN tb_order b ON a.orderNo = b.orderNo
             LEFT JOIN tb_airPort c ON b.airPortCode = c.airPortCode
         WHERE
-            b.checkOrderStatus IS NULL
+            b.checkOrderStatus = 0
         AND
             DATEDIFF(month,b.airStartTime,#{queryDate}) = 0
         AND
             b.addType = 2
+        AND
+			b.orderStatus = 3
+		AND
+		    (b.deleteOrderStatus != 1 or b.deleteOrderStatus is null)
+		and
+		    b.closeOrderStatus is null
         ORDER BY
             b.airStartTime
     </select>
@@ -70,12 +77,13 @@
             AND orderStatus = 3
             AND airPortCode = #{airPortCode}
             AND addType = 2
+            and (deleteOrderStatus != 1 or deleteOrderStatus is null)
             ) a
         GROUP BY
             accountBelong,
             formatTime
             ) b
-            LEFT JOIN tb_admin c ON b.accountBelong = c.adminName
+        LEFT JOIN tb_admin c ON b.accountBelong = c.adminName
     </select>
 
 </mapper>
