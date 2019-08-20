@@ -61,10 +61,13 @@ public class ExportService {
         cellStyleMap.put("centerAndBold",ExportCellStyle.centerAndBold(workbook));
         cellStyleMap.put("centerAndRed",ExportCellStyle.centerAndColor(workbook,IndexedColors.RED.getIndex()));
 
-        buildQuSheet(workbook,cellStyleMap,queryDate);
+        buildQuXccxSheet(workbook,cellStyleMap,queryDate,"XCCX","携程出行总表");
+        buildQuXccxSheet(workbook,cellStyleMap,queryDate,"QU","去哪儿总表");
         buildTcSheet(workbook,cellStyleMap,queryDate);
+        //未核销明细表：服务已经完成，但是未核销的
         buildUncheck(workbook,cellStyleMap,queryDate);
         buildPST(workbook,cellStyleMap,queryDate,"QU","去哪儿PST",ExportConstant.airPortMap);
+        buildPST(workbook,cellStyleMap,queryDate,"XCCX","携程出行PST",ExportConstant.airPortMap);
         buildPST(workbook,cellStyleMap,queryDate,"XC","携程PST",ExportConstant.xcPortPst);
         buildPST(workbook,cellStyleMap,queryDate,"TCYL","同程PST",ExportConstant.tcPortPst);
 
@@ -74,14 +77,13 @@ public class ExportService {
     }
 
     /**
-     * 去哪儿总表
+     * 去哪儿，携程出行总表总表
      * @param workbook 表格主体
      * @param cellStyleMap 单元格样式
      * @param queryDate 统计日期
      */
-    private void buildQuSheet(XSSFWorkbook workbook,Map<String,CellStyle> cellStyleMap,String queryDate) {
-        //去哪儿总表
-        XSSFSheet quSheet = workbook.createSheet("去哪儿总表");
+    private void buildQuXccxSheet(XSSFWorkbook workbook,Map<String,CellStyle> cellStyleMap,String queryDate,String supplyCode,String sheetName) {
+        XSSFSheet quSheet = workbook.createSheet(sheetName);
 
         //构建动态表头
         Row head = quSheet.createRow(0);
@@ -104,10 +106,10 @@ public class ExportService {
             sign.setCellValue("总量");
             sign = second.createCell(startCol+1);
             sign.setCellStyle(headStyle);
-            sign.setCellValue("核销成功");
+            sign.setCellValue("已核销");
             sign = second.createCell(startCol+2);
             sign.setCellStyle(headStyle);
-            sign.setCellValue("核销未成功");
+            sign.setCellValue("未核销");
             sign = second.createCell(startCol+3);
             sign.setCellStyle(headStyle);
             sign.setCellValue("日使用率");
@@ -139,11 +141,11 @@ public class ExportService {
         List<Map<String,List>> dataList = new ArrayList<>();
         for(String k: airPortMap.keySet()) {
             //总量
-            List<Map<String, Object>> total = exportDao.getCensusData(queryDate, "QU", k, null,null);
-            //核销成功
-            List<Map<String, Object>> checkSuccess = exportDao.getCensusData(queryDate, "QU", k, 1,null);
-            //核销未成功
-            List<Map<String, Object>> checkFail = exportDao.getCensusData(queryDate, "QU", k, 0,null);
+            List<Map<String, Object>> total = exportDao.getCensusData(queryDate, supplyCode, k, null,null);
+            //已核销
+            List<Map<String, Object>> checkSuccess = exportDao.getCensusData(queryDate, supplyCode, k, 1,3);
+            //未核销
+            List<Map<String, Object>> checkFail = exportDao.getCensusData(queryDate, supplyCode, k, 0,3);
             Map<String,List> map = new HashMap<>();
             map.put("total",total);
             map.put("checkSuccess",checkSuccess);
@@ -447,6 +449,7 @@ public class ExportService {
                         if(addTime.equals(dateList.get(i))) {
                             dataCell.setCellValue((Integer)totalMap.get("total"));
                             totalCount = (Integer)totalMap.get("total");
+                            break;
                         }else{
                             dataCell.setCellValue(0);
                         }
@@ -464,11 +467,13 @@ public class ExportService {
                         if(addTime.equals(dateList.get(i))) {
                             dataCell.setCellValue((Integer)doneMap.get("total"));
                             doneCount = (Integer)doneMap.get("total");
+                            break;
                         }else{
                             dataCell.setCellValue(0);
                         }
                     }
                 }
+
                 dataRow = tcSheet.getRow(rowNum+3);
                 dataCell = dataRow.createCell(cellNum);
                 dataCell.setCellStyle(cellStyleMap.get("alignRight"));
@@ -586,12 +591,10 @@ public class ExportService {
         head.createCell(1).setCellValue("订单号");
         head.createCell(2).setCellValue("航站楼");
         head.createCell(3).setCellValue("姓名");
-        head.createCell(4).setCellValue("手机号码");
-        head.createCell(5).setCellValue("原因");
+        head.createCell(4).setCellValue("原因");
 
         uncheckSheet.setColumnWidth(1,35*256);
-        uncheckSheet.setColumnWidth(4,20*256);
-        uncheckSheet.setColumnWidth(5,50*256);
+        uncheckSheet.setColumnWidth(4,50*256);
 
 
         List<Map<String, Object>> list = exportDao.uncheckList(queryDate);
@@ -609,8 +612,7 @@ public class ExportService {
             row.createCell(1).setCellValue(map.get("orderSaleNo")==null?"":(String)map.get("orderSaleNo"));
             row.createCell(2).setCellValue(map.get("airPortCodeNote")==null?"":(String)map.get("airPortCodeNote"));
             row.createCell(3).setCellValue(map.get("customName")==null?"":(String)map.get("customName"));
-            row.createCell(4).setCellValue(map.get("customTel")==null?"":(String)map.get("customTel"));
-            row.createCell(5).setCellValue(map.get("orderMark")==null?"":(String)map.get("orderMark"));
+            row.createCell(4).setCellValue(map.get("orderMark")==null?"":(String)map.get("orderMark"));
         }
 
 
@@ -654,16 +656,28 @@ public class ExportService {
         //数据部分,一个机场一个机场的处理
         int partCellNum = 1;
         int cellNum = 1;
+        int allEmptyList = 0;
         for(String k:airPortMap.keySet()) {
             //机场名称
             Row airportRow = sheet.getRow(0)==null?sheet.createRow(0):sheet.getRow(0);
             airportRow.setHeight((short)450);
-            Cell airportCell = airportRow.createCell(partCellNum);
-            airportCell.setCellValue(airPortMap.get(k));
-            airportCell.setCellStyle(centerAndRed);
 
             //某个机场的所有数据
             List<Map<String, Object>> list = exportDao.PSTList(queryDate, supplierCode, k);
+            if(list==null||list.size()==0) {
+                allEmptyList ++;
+                if(allEmptyList==airPortMap.size()) {
+                    Cell nonCell = airportRow.createCell(0);
+                    nonCell.setCellStyle(cellStyleMap.get("centerAndBold"));
+                    nonCell.setCellValue("无数据");
+                    return;
+                }
+                continue;
+            }else{
+                Cell airportCell = airportRow.createCell(partCellNum);
+                airportCell.setCellValue(airPortMap.get(k));
+                airportCell.setCellStyle(centerAndRed);
+            }
             Map<String,Integer> workMap = new HashMap<>();
             for (Map<String, Object> map : list) {
                 String worker = (String)map.get("adminRealName");

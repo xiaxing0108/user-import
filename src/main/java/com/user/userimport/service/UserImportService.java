@@ -63,48 +63,79 @@ public class UserImportService {
         }
         XSSFSheet sheet = workbook.getSheetAt(0);
         int orderSaleNoIndex=-1,serviceIdIndex=-1,airStartTimeIndex=-1,airNoIndex=-1,airPortCodeIndex=-1,
-                customNameIndex=-1,certNoIndex=-1,orderMarkIndex=-1,siteNoIndex=-1,statusIndex=-1,customTelIndex=-1,tCTimeIndex = -1;
+                customNameIndex=-1,certNoIndex=-1,orderMarkIndex=-1,siteNoIndex=-1,statusIndex=-1,customTelIndex=-1,tCTimeIndex = -1,terminalIndex = -1;
         String supplierCode = "";
         String name = file.getOriginalFilename();
         //获取列名行
         XSSFRow head = sheet.getRow(0);
         if(name.contains("携程")) {
-            supplierCode = "XC";
-            Iterator<Cell> cellIterator = head.cellIterator();
-            int index = 0;
-            while(cellIterator.hasNext()) {
-                Cell cell = cellIterator.next();
-                String cellValue = cell.getStringCellValue().trim();
-                if(cellValue.equals("操作单号")) {
-                    orderSaleNoIndex = index;
-                }
-                if(cellValue.equals("dport")) {
-                    airPortCodeIndex = index;
-                }
-                if(cellValue.equals("takeofftime")) {
-                    airStartTimeIndex = index;
-                }
-                if(cellValue.equals("出行人姓名")) {
-                    customNameIndex = index;
-                }
-                if(cellValue.equals("航班号")) {
-                    airNoIndex = index;
-                }
-                if(cellValue.equals("联系人手机")) {
-                    customTelIndex = index;
-                }
-                if(cellValue.equals("备注")) {
-                    orderMarkIndex = index;
-                }
-                if(cellValue.equals("出行人证件号")) {
-                    certNoIndex = index;
-                }
+            if(name.contains("携程出行")) {
+                supplierCode = "XCCX";
+                Iterator<Cell> cellIterator = head.cellIterator();
+                int index = 0;
+                while(cellIterator.hasNext()) {
+                    Cell cell = cellIterator.next();
+                    String cellValue = cell.getStringCellValue().trim();
+                    if(cellValue.equals("dport")) {
+                        airPortCodeIndex = index;
+                    }
+                    if(cellValue.equals("takeofftime")) {
+                        airStartTimeIndex = index;
+                    }
+                    if(cellValue.equals("passengername")) {
+                        customNameIndex = index;
+                    }
+                    if(cellValue.equals("flight")) {
+                        airNoIndex = index;
+                    }
+                    if(cellValue.equals("contacttel")) {
+                        customTelIndex = index;
+                    }
+                    if(cellValue.equals("cardno")) {
+                        certNoIndex = index;
+                    }
 
-                index ++;
+                    index ++;
 
+                }
+            }else{
+                supplierCode = "XC";
+                Iterator<Cell> cellIterator = head.cellIterator();
+                int index = 0;
+                while(cellIterator.hasNext()) {
+                    Cell cell = cellIterator.next();
+                    String cellValue = cell.getStringCellValue().trim();
+                    if(cellValue.equals("操作单号")) {
+                        orderSaleNoIndex = index;
+                    }
+                    if(cellValue.equals("dport")) {
+                        airPortCodeIndex = index;
+                    }
+                    if(cellValue.equals("takeofftime")) {
+                        airStartTimeIndex = index;
+                    }
+                    if(cellValue.equals("出行人姓名")) {
+                        customNameIndex = index;
+                    }
+                    if(cellValue.equals("航班号")) {
+                        airNoIndex = index;
+                    }
+                    if(cellValue.equals("联系人手机")) {
+                        customTelIndex = index;
+                    }
+                    if(cellValue.equals("备注")) {
+                        orderMarkIndex = index;
+                    }
+                    if(cellValue.equals("出行人证件号")) {
+                        certNoIndex = index;
+                    }
+
+                    index ++;
+
+                }
             }
         }
-        if(name.contains("艺龙")) {
+        if(name.contains("艺龙")||name.contains("同程")) {
             supplierCode = "TCYL";
             Iterator<Cell> cellIterator = head.cellIterator();
             int index = 0;
@@ -149,6 +180,9 @@ public class UserImportService {
                 if(cellValue.equals("订单号")) {
                     orderSaleNoIndex = index;
                 }
+                if(cellValue.equals("航站楼")) {
+                    terminalIndex = index;
+                }
                 if(cellValue.equals("出发时间")) {
                     airStartTimeIndex = index;
                 }
@@ -175,56 +209,97 @@ public class UserImportService {
         }
 
         Map<String,UrlParams> map = new HashMap<>();
-
+        List<Map<String,Object>> errorList = new ArrayList<>();
         if(name.contains("携程")) {
-            int index = 1;
-            while(true) {
-                XSSFRow row = sheet.getRow(index);
-                if(row==null) {
-                    break;
-                }
-                String orderNo = row.getCell(orderSaleNoIndex).getStringCellValue().trim();
-                if(StringUtils.isEmpty(orderNo)) {
-                    break;
-                }
-                if(map.containsKey(orderNo)){
-                    UrlParams urlParams = map.get(orderNo);
-                    urlParams.setCustomName(urlParams.getCustomName()+","+row.getCell(customNameIndex).getStringCellValue().trim());
-                }else{
-                    UrlParams urlParams = new UrlParams();
-                    urlParams.setOrderSaleNo(orderNo);
-                    urlParams.setSupplierCode(supplierCode);
-                    urlParams.setServiceId("1");
-                    Cell orderDateCell = row.getCell(airStartTimeIndex);
-                    String orderDate = orderDateCell.getStringCellValue();
-                    /*if(orderDateCell.getCellTypeEnum()==CellType.NUMERIC) {
-                        if(DateUtil.isCellDateFormatted(orderDateCell)) {
-                            Date date = orderDateCell.getDateCellValue();
-                            orderDate = DateUtils.dateToString(date,"yyyy/MM/dd HH:mm:ss");
-                        }
+            if(name.contains("携程出行")) {
+                int index = 1;
+                while(true) {
+                    XSSFRow row = sheet.getRow(index);
+                    if(row==null) {
+                        break;
+                    }
+                    String phone = row.getCell(customTelIndex).getStringCellValue().trim();
+                    String customName = row.getCell(customNameIndex).getStringCellValue().trim();
+                    String cardNo = row.getCell(certNoIndex).getStringCellValue().trim();
+                    if(map.containsKey(phone)) {
+                        UrlParams urlParams = map.get(phone);
+                        urlParams.setCustomName(urlParams.getCustomName()+","+customName);
+                        urlParams.setCertNo(urlParams.getCertNo()+";"+customName+":"+cardNo);
                     }else{
-                        orderDate = orderDateCell.getStringCellValue().trim().substring(0,16).replaceAll("-","/");
-                    }*/
-                    urlParams.setAirStartTime(orderDate);
-                    if(airNoIndex>=0) {
-                        urlParams.setAirNo(row.getCell(airNoIndex).getStringCellValue().trim());
+                        UrlParams urlParams = new UrlParams();
+                        try {
+                            urlParams.setAirStartTime(row.getCell(airStartTimeIndex).getStringCellValue());
+                        } catch (Exception e) {
+                            logger.error("航班日期格式错误{}",e);
+                            Map<String,Object> errorMap = new HashMap<>();
+                            errorMap.put(phone,"航班日期格式错误");
+                            errorList.add(errorMap);
+                            index++;
+                            continue;
+                        }
+                        urlParams.setAirNo(row.getCell(airNoIndex).getStringCellValue());
+                        urlParams.setAirPortCode(row.getCell(airPortCodeIndex).getStringCellValue());
+                        urlParams.setCustomTel(phone);
+                        urlParams.setCustomName(customName);
+                        urlParams.setCertNo(customName+":"+cardNo);
+                        urlParams.setSupplierCode(supplierCode);
+                        urlParams.setOrderSaleNo(phone);
+                        map.put(phone,urlParams);
                     }
-                    if(customNameIndex>=0) {
-                        urlParams.setCustomName(row.getCell(customNameIndex).getStringCellValue().trim());
-                    }
-                    urlParams.setAirPortCode(row.getCell(airPortCodeIndex).getStringCellValue().trim());
-                    urlParams.setCustomTel(row.getCell(customTelIndex).getStringCellValue().trim());
-                    String certNo = row.getCell(certNoIndex).getStringCellValue().trim();
-                    if(!certNo.contains("*")) {
-                        urlParams.setCertNo(row.getCell(customNameIndex).getStringCellValue().trim()+":"+certNo);
-                    }
-                    if(orderMarkIndex>=0) {
-                        String orderMark = row.getCell(orderMarkIndex).getStringCellValue().trim();
-                        urlParams.setOrderMark(orderMark);
-                    }
-                    map.put(orderNo,urlParams);
+                    index++;
+
                 }
-                index ++;
+            }else{
+                int index = 1;
+                while(true) {
+                    XSSFRow row = sheet.getRow(index);
+                    if(row==null) {
+                        break;
+                    }
+                    String orderNo = row.getCell(orderSaleNoIndex).getStringCellValue().trim();
+                    if(StringUtils.isEmpty(orderNo)) {
+                        break;
+                    }
+                    if(map.containsKey(orderNo)){
+                        UrlParams urlParams = map.get(orderNo);
+                        urlParams.setCustomName(urlParams.getCustomName()+","+row.getCell(customNameIndex).getStringCellValue().trim());
+                    }else{
+                        UrlParams urlParams = new UrlParams();
+                        urlParams.setOrderSaleNo(orderNo);
+                        urlParams.setSupplierCode(supplierCode);
+                        urlParams.setServiceId("1");
+                        Cell orderDateCell = row.getCell(airStartTimeIndex);
+                        try {
+                            String orderDate = orderDateCell.getStringCellValue();
+                            urlParams.setAirStartTime(orderDate);
+                        } catch (Exception e) {
+                            logger.error("航班日期格式错误{}",e);
+                            Map<String,Object> errorMap = new HashMap<>();
+                            errorMap.put(orderNo,"航班日期格式错误");
+                            errorList.add(errorMap);
+                            index++;
+                            continue;
+                        }
+                        if(airNoIndex>=0) {
+                            urlParams.setAirNo(row.getCell(airNoIndex).getStringCellValue().trim());
+                        }
+                        if(customNameIndex>=0) {
+                            urlParams.setCustomName(row.getCell(customNameIndex).getStringCellValue().trim());
+                        }
+                        urlParams.setAirPortCode(row.getCell(airPortCodeIndex).getStringCellValue().trim());
+                        urlParams.setCustomTel(row.getCell(customTelIndex).getStringCellValue().trim());
+                        String certNo = row.getCell(certNoIndex).getStringCellValue().trim();
+                        if(!certNo.contains("*")) {
+                            urlParams.setCertNo(row.getCell(customNameIndex).getStringCellValue().trim()+":"+certNo);
+                        }
+                        if(orderMarkIndex>=0) {
+                            String orderMark = row.getCell(orderMarkIndex).getStringCellValue().trim();
+                            urlParams.setOrderMark(orderMark);
+                        }
+                        map.put(orderNo,urlParams);
+                    }
+                    index ++;
+                }
             }
         }
         if(name.contains("去哪")) {
@@ -258,18 +333,31 @@ public class UserImportService {
                     map.put(orderNo,urlParams);
                 }else{
                     UrlParams urlParams = new UrlParams();
+                    String terminal = row.getCell(terminalIndex).getStringCellValue();
+                    if(!StringUtils.isEmpty(terminal)&&!" ".equals(terminal)) {
+                        urlParams.setTerminal(terminal);
+                    }
                     urlParams.setOrderSaleNo(orderNo);
                     urlParams.setSupplierCode(supplierCode);
                     urlParams.setServiceId("1");
                     Cell orderDateCell = row.getCell(airStartTimeIndex);
                     String orderDate = "" ;
-                    if(orderDateCell.getCellTypeEnum()==CellType.NUMERIC) {
-                        if(DateUtil.isCellDateFormatted(orderDateCell)) {
-                            Date date = orderDateCell.getDateCellValue();
-                            orderDate = DateUtils.dateToString(date,"yyyy/MM/dd HH:mm:ss");
+                    try {
+                        if(orderDateCell.getCellTypeEnum()==CellType.NUMERIC) {
+                            if(DateUtil.isCellDateFormatted(orderDateCell)) {
+                                Date date = orderDateCell.getDateCellValue();
+                                orderDate = DateUtils.dateToString(date,"yyyy/MM/dd HH:mm:ss");
+                            }
+                        }else{
+                            orderDate = orderDateCell.getStringCellValue().trim().substring(0,16).replaceAll("-","/");
                         }
-                    }else{
-                        orderDate = orderDateCell.getStringCellValue().trim().substring(0,16).replaceAll("-","/");
+                    } catch (Exception e) {
+                        logger.error("航班日期错误{}",e);
+                        Map<String,Object> errorMap = new HashMap();
+                        errorMap.put(orderNo,"航班日期格式错误");
+                        errorList.add(errorMap);
+                        index++;
+                        continue;
                     }
                     urlParams.setAirStartTime(orderDate);
                     if(airNoIndex>=0) {
@@ -294,7 +382,7 @@ public class UserImportService {
             logger.info(map.toString());
         }
 
-        if(name.contains("同程")) {
+        if(name.contains("同程")||name.contains("艺龙")) {
             int index = 1;
             while(true) {
                 XSSFRow row = sheet.getRow(index);
@@ -323,8 +411,17 @@ public class UserImportService {
                     startDateCell.setCellType(CellType.NUMERIC);
                     Cell startTimeCell = row.getCell(tCTimeIndex);
                     startTimeCell.setCellType(CellType.NUMERIC);
-                    String startDate = DateUtils.dateToString(startDateCell.getDateCellValue(),"yyyy/MM/dd")+" "+DateUtils.dateToString(startTimeCell.getDateCellValue(),"HH:mm");
-                    urlParams.setAirStartTime(startDate);
+                    try {
+                        String startDate = DateUtils.dateToString(startDateCell.getDateCellValue(),"yyyy/MM/dd")+" "+DateUtils.dateToString(startTimeCell.getDateCellValue(),"HH:mm");
+                        urlParams.setAirStartTime(startDate);
+                    } catch (Exception e) {
+                        logger.error("航班日期格式错误{}",e);
+                        Map<String,Object> errorMp = new HashMap<>();
+                        errorMp.put(orderNo,"航班日期格式错误");
+                        errorList.add(errorMp);
+                        index++;
+                        continue;
+                    }
                     if(airNoIndex>=0) {
                         urlParams.setAirNo(row.getCell(airNoIndex).getStringCellValue().trim());
                     }
@@ -349,130 +446,177 @@ public class UserImportService {
         Map<String,Object> resultMap = new HashMap<>();
         List<UrlParams> orderList = new ArrayList<>();
         List<Map<String,Object>> paramsMapList = new ArrayList<>();
+
         if(map.size()>0) {
-            /*for(String s : map.keySet()) {
-                StringBuilder url = new StringBuilder(UserImportConstant.USER_IMPORT_URL);
-                UrlParams urlParams = map.get(s);
-                if(!StringUtils.isEmpty(urlParams.getOrderSaleNo())) {
-                    url.append("?orderSaleNo="+urlParams.getOrderSaleNo());
-                }
-                if(!StringUtils.isEmpty(urlParams.getSupplierCode())) {
-                    url.append("&supplierCode="+urlParams.getSupplierCode());
-                }
-                if(!StringUtils.isEmpty(urlParams.getServiceId())) {
-                    url.append("&serviceId="+urlParams.getServiceId());
-                }
-                if(!StringUtils.isEmpty(urlParams.getAirStartTime())) {
-                    url.append("&airStartTime="+URLEncoder.encode(urlParams.getAirStartTime(),"utf-8"));
-                }
-                if(!StringUtils.isEmpty(urlParams.getAirNo())) {
-                    url.append("&airNo="+urlParams.getAirNo());
-                }
-                if(!StringUtils.isEmpty(urlParams.getAirPortCode())) {
-                    url.append("&airPortCode="+urlParams.getAirPortCode());
-                }
-                if(!StringUtils.isEmpty(urlParams.getCustomName())) {
-                    url.append("&customName="+URLEncoder.encode(urlParams.getCustomName(),"utf-8"));
-                }
-                if(!StringUtils.isEmpty(urlParams.getCustomTel())) {
-                    url.append("&customTel="+urlParams.getCustomTel());
-                }
-                if(!StringUtils.isEmpty(urlParams.getCertNo())) {
-                    url.append("&certNo="+URLEncoder.encode(urlParams.getCertNo(),"utf-8"));
-                }
-                if(!StringUtils.isEmpty(urlParams.getOrderMark())) {
-                    url.append("&orderMark="+URLEncoder.encode(urlParams.getOrderMark(),"utf-8"));
-                }
-                String response = HttpUtil.doPost(url.toString());
-                JSONObject responseJson = JSONObject.parseObject(response);
-                if(responseJson!=null&&responseJson.containsKey("code")) {
-                    if(!"20000".equals(String.valueOf(responseJson.get("code")))) {
-                        resultMap.put(urlParams.getOrderSaleNo(),responseJson.getString("message"));
+            if(name.contains("携程出行")) {
+                for(String s :map.keySet()) {
+                    UrlParams urlParams = map.get(s);
+                    urlParams.setOrderNo(getOrderNo());
+                    Map<String,Object> errorMap = new HashMap<>();
+
+                    // 参数验证跟默认值赋予
+                    String phone = urlParams.getCustomTel();
+                    if(StringUtils.isEmpty(urlParams.getAirPortCode())) {
+                        urlParams.setOrderStatus(0);
+                    }else{
+                        urlParams.setOrderStatus(1);
                     }
-                }
-            }*/
-            List<Map<String,Object>> errorList = new ArrayList<>();
-            for(String s:map.keySet()) {
-                UrlParams urlParams = map.get(s);
-                urlParams.setOrderNo(getOrderNo());
-                Map<String,Object> errorMap = new HashMap<>();
-                 // 参数验证跟默认值赋予
-                String phone = urlParams.getCustomTel();
-                if(StringUtils.isEmpty(urlParams.getAirPortCode())) {
-                    urlParams.setOrderStatus(0);
-                }else{
-                    urlParams.setOrderStatus(1);
-                }
-                if(!StringUtils.isEmpty(urlParams.getCertNo())) {
-                    urlParams.setInputCertNoTime(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-                }
-                if(!StringUtils.isEmpty(urlParams.getSiteNo())) {
-                    urlParams.setInputSiteNoTime(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-                }
-                //必填项校验
-                if(StringUtils.isEmpty(urlParams.getOrderSaleNo())) {
-                    errorMap.put("空销售单号","销售单号不能为空!");
-                    errorList.add(errorMap);
-                    continue;
-                }
-                if(StringUtils.isEmpty(phone)) {
-                    errorMap.put(urlParams.getOrderSaleNo(),"手机号不能为空!");
-                    errorList.add(errorMap);
-                    continue;
-                }
-                /*if(StringUtils.isEmpty(urlParams.getAirStartTime())) {
-                    errorMap.put(urlParams.getOrderSaleNo(),"航班日期不能为空!");
-                    errorList.add(errorMap);
-                    continue;
-                }*/
+                    if(!StringUtils.isEmpty(urlParams.getCertNo())) {
+                        urlParams.setInputCertNoTime(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+                    }
+                    if(!StringUtils.isEmpty(urlParams.getSiteNo())) {
+                        urlParams.setInputSiteNoTime(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+                    }
+                    //必填项校验
+                    /*if(StringUtils.isEmpty(urlParams.getOrderSaleNo())) {
+                        errorMap.put("空销售单号","销售单号不能为空!");
+                        errorList.add(errorMap);
+                        continue;
+                    }*/
+                    if(StringUtils.isEmpty(phone)) {
+                        errorMap.put(urlParams.getCustomTel(),"手机号不能为空!");
+                        errorList.add(errorMap);
+                        continue;
+                    }
+                    if(StringUtils.isEmpty(urlParams.getAirStartTime())||" ".equals(urlParams.getAirStartTime())) {
+                        errorMap.put(urlParams.getCustomTel(),"航班日期不能为空!");
+                        errorList.add(errorMap);
+                        continue;
+                    }
                 /*if(StringUtils.isEmpty(urlParams.getAirPortCode())) {
                     errorMap.put(urlParams.getOrderSaleNo(),"航站站点编码不能为空!");
                     errorList.add(errorMap);
                     continue;
                 }*/
-                if(!ValidateUtils.checkPhone(phone)) {
-                    errorMap.put(urlParams.getOrderSaleNo(),"手机号码格式不正确");
-                    errorList.add(errorMap);
-                    continue;
-                }
+                    if(!ValidateUtils.checkPhone(phone)) {
+                        errorMap.put(urlParams.getCustomTel(),"手机号码格式不正确");
+                        errorList.add(errorMap);
+                        continue;
+                    }
 
-                if(userImportDao.existsOrder(urlParams.getOrderSaleNo())!=null) {
-                    errorMap.put(urlParams.getOrderSaleNo(),"订单号已经存在，不可重复添加!");
-                    errorList.add(errorMap);
-                    continue;
-                }
-                //插入数据
-                orderList.add(urlParams);
-                //userImportDao.insertOrder(urlParams);
-                String certNo = urlParams.getCertNo();
-                if (certNo!=null) {
-                    String[] certs = certNo.split(";");
-                    if(certs.length>0) {
-                        for (int i = 0; i < certs.length; i++) {
-                            Map<String,Object> paramsMap = new HashMap<>();
-                            String[] certInfo = certs[i].split(":");
-                            paramsMap.put("orderNo",urlParams.getOrderNo());
-                            if(certInfo.length==2) {
-                                paramsMap.put("customName",certInfo[0]);
-                                paramsMap.put("certNo",certInfo[1]);
+                    if(userImportDao.existsXccxOrder(urlParams.getAirStartTime(),urlParams.getCustomTel())!=null) {
+                        errorMap.put(urlParams.getCustomTel(),"订单已经存在，不可重复添加!");
+                        errorList.add(errorMap);
+                        continue;
+                    }
+
+                    //插入数据
+                    orderList.add(urlParams);
+                    //userImportDao.insertOrder(urlParams);
+                    String certNo = urlParams.getCertNo();
+                    if (certNo!=null) {
+                        String[] certs = certNo.split(";");
+                        if(certs.length>0) {
+                            for (int i = 0; i < certs.length; i++) {
+                                Map<String,Object> paramsMap = new HashMap<>();
+                                String[] certInfo = certs[i].split(":");
+                                paramsMap.put("orderNo",urlParams.getOrderNo());
+                                if(certInfo.length==2) {
+                                    paramsMap.put("customName",certInfo[0]);
+                                    paramsMap.put("certNo",certInfo[1]);
+                                }
+                                //userImportDao.insertCertInfo(paramsMap);
+                                paramsMapList.add(paramsMap);
                             }
-                            //userImportDao.insertCertInfo(paramsMap);
-                            paramsMapList.add(paramsMap);
+                        }
+                    }else{
+                        String certInfo = urlParams.getCustomName();
+                        if(!StringUtils.isEmpty(certInfo)) {
+                            String[] certInfoArr = certInfo.split(",");
+                            for (int i = 0; i < certInfoArr.length; i++) {
+                                Map<String,Object> paramsMap = new HashMap<>();
+                                paramsMap.put("orderNo",urlParams.getOrderNo());
+                                paramsMap.put("customName",certInfoArr[i]);
+                                paramsMapList.add(paramsMap);
+                            }
                         }
                     }
-                }else{
-                    String certInfo = urlParams.getCustomName();
-                    if(!StringUtils.isEmpty(certInfo)) {
-                        String[] certInfoArr = certInfo.split(",");
-                        for (int i = 0; i < certInfoArr.length; i++) {
-                            Map<String,Object> paramsMap = new HashMap<>();
-                            paramsMap.put("orderNo",urlParams.getOrderNo());
-                            paramsMap.put("customName",certInfoArr[i]);
-                            paramsMapList.add(paramsMap);
+
+                }
+            }else{
+                for(String s:map.keySet()) {
+                    UrlParams urlParams = map.get(s);
+                    urlParams.setOrderNo(getOrderNo());
+                    Map<String,Object> errorMap = new HashMap<>();
+                    // 参数验证跟默认值赋予
+                    String phone = urlParams.getCustomTel();
+                    if(StringUtils.isEmpty(urlParams.getAirPortCode())) {
+                        urlParams.setOrderStatus(0);
+                    }else{
+                        urlParams.setOrderStatus(1);
+                    }
+                    if(!StringUtils.isEmpty(urlParams.getCertNo())) {
+                        urlParams.setInputCertNoTime(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+                    }
+                    if(!StringUtils.isEmpty(urlParams.getSiteNo())) {
+                        urlParams.setInputSiteNoTime(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+                    }
+                    //必填项校验
+                    if(StringUtils.isEmpty(urlParams.getOrderSaleNo())) {
+                        errorMap.put("空销售单号","销售单号不能为空!");
+                        errorList.add(errorMap);
+                        continue;
+                    }
+                    if(StringUtils.isEmpty(phone)) {
+                        errorMap.put(urlParams.getOrderSaleNo(),"手机号不能为空!");
+                        errorList.add(errorMap);
+                        continue;
+                    }
+                    if(StringUtils.isEmpty(urlParams.getAirStartTime())||" ".equals(urlParams.getAirStartTime())) {
+                        errorMap.put(urlParams.getOrderSaleNo(),"航班日期不能为空!");
+                        errorList.add(errorMap);
+                        continue;
+                    }
+                /*if(StringUtils.isEmpty(urlParams.getAirPortCode())) {
+                    errorMap.put(urlParams.getOrderSaleNo(),"航站站点编码不能为空!");
+                    errorList.add(errorMap);
+                    continue;
+                }*/
+                    if(!ValidateUtils.checkPhone(phone)) {
+                        errorMap.put(urlParams.getOrderSaleNo(),"手机号码格式不正确");
+                        errorList.add(errorMap);
+                        continue;
+                    }
+
+                    if(userImportDao.existsOrder(urlParams.getOrderSaleNo())!=null) {
+                        errorMap.put(urlParams.getOrderSaleNo(),"订单已经存在，不可重复添加!");
+                        errorList.add(errorMap);
+                        continue;
+                    }
+                    //插入数据
+                    orderList.add(urlParams);
+                    //userImportDao.insertOrder(urlParams);
+                    String certNo = urlParams.getCertNo();
+                    if (certNo!=null) {
+                        String[] certs = certNo.split(";");
+                        if(certs.length>0) {
+                            for (int i = 0; i < certs.length; i++) {
+                                Map<String,Object> paramsMap = new HashMap<>();
+                                String[] certInfo = certs[i].split(":");
+                                paramsMap.put("orderNo",urlParams.getOrderNo());
+                                if(certInfo.length==2) {
+                                    paramsMap.put("customName",certInfo[0]);
+                                    paramsMap.put("certNo",certInfo[1]);
+                                }
+                                //userImportDao.insertCertInfo(paramsMap);
+                                paramsMapList.add(paramsMap);
+                            }
+                        }
+                    }else{
+                        String certInfo = urlParams.getCustomName();
+                        if(!StringUtils.isEmpty(certInfo)) {
+                            String[] certInfoArr = certInfo.split(",");
+                            for (int i = 0; i < certInfoArr.length; i++) {
+                                Map<String,Object> paramsMap = new HashMap<>();
+                                paramsMap.put("orderNo",urlParams.getOrderNo());
+                                paramsMap.put("customName",certInfoArr[i]);
+                                paramsMapList.add(paramsMap);
+                            }
                         }
                     }
                 }
             }
+
             //批量插入数据
             baseDao.batchInsertOrder(orderList);
             baseDao.batchInsertCertInfo(paramsMapList);
@@ -566,11 +710,15 @@ public class UserImportService {
      * 生成订单号 N + yyyymmddHHMMSS + 3个随机字符（字符+数字） +  00
      * @return
      */
-    private String getOrderNo() {
+    private synchronized String getOrderNo() {
         Random random = new Random();
 
         return "N"+LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))+
-                CODE_ARRAY[random.nextInt(CODE_ARRAY.length)]+CODE_ARRAY[random.nextInt(CODE_ARRAY.length)]+CODE_ARRAY[random.nextInt(CODE_ARRAY.length)]
-                +"00";
+                CODE_ARRAY[random.nextInt(CODE_ARRAY.length)]+
+                CODE_ARRAY[random.nextInt(CODE_ARRAY.length)]+
+                CODE_ARRAY[random.nextInt(CODE_ARRAY.length)]+
+                CODE_ARRAY[random.nextInt(CODE_ARRAY.length)]+
+                CODE_ARRAY[random.nextInt(CODE_ARRAY.length)]
+                ;
     }
 }

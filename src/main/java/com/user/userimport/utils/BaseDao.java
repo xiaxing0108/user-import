@@ -96,7 +96,6 @@ public class BaseDao {
             }
 
             ps.executeBatch();
-
             close(connection);
 
         }catch(Exception e){

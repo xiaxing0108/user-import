@@ -20,7 +20,16 @@ public class UrlParams {
     private Integer orderStatus;
     private String inputCertNoTime;
     private String inputSiteNoTime;
+    private String terminal;
 
+
+    public String getTerminal() {
+        return terminal;
+    }
+
+    public void setTerminal(String terminal) {
+        this.terminal = terminal;
+    }
 
     public String getOrderNo() {
         return orderNo;

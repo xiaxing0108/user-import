@@ -2,9 +2,11 @@ package com.user.userimport.dao;
 
 import com.user.userimport.pojo.PassengerInfo;
 import com.user.userimport.pojo.UrlParams;
+import org.apache.ibatis.annotations.Param;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -47,5 +49,12 @@ public interface UserImportDao {
      * @throws DataAccessException
      */
     Integer existsOrder(String orderSaleNo)throws DataAccessException;
+
+    /**
+     * 判断携程出行订单是否存在
+     * @return
+     */
+    Integer existsXccxOrder(@Param("airStartTime")String airStartTime,
+                            @Param("phone") String phone);
 
 }

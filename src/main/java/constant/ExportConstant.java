@@ -30,6 +30,8 @@ public class ExportConstant {
         airPortMap.put("SZX","深圳");
         airPortMap.put("KMG","昆明");
         airPortMap.put("XIY","西安");
+        airPortMap.put("TAO","青岛");
+        airPortMap.put("CTU","成都");
 
         airPortMapTC.put("SHA","虹桥");
         airPortMapTC.put("CKG","重庆");

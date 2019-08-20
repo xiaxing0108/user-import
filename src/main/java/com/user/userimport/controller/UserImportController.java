@@ -30,7 +30,7 @@ public class UserImportController {
             return WebResult.success("批量导入成功!",strings);
         } catch (Exception e) {
             logger.error("批量导入失败{}",e);
-            return WebResult.error("批量导入失败!"+e.getMessage());
+            return WebResult.error("批量导入失败!");
         }
 
     }
