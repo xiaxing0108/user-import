@@ -16,7 +16,7 @@
         and a.airPortCode = #{airPortCode}
         <if test="checkOrderStatus!=null">
             and a.checkOrderStatus = #{checkOrderStatus}
-            and a.closeOrderStatus is null
+            and (a.closeOrderStatus is null or a.closeOrderStatus = 0)
         </if>
         <if test="orderStatus!=null">
             and a.orderStatus = #{orderStatus}
@@ -48,7 +48,7 @@
 		AND
 		    (b.deleteOrderStatus != 1 or b.deleteOrderStatus is null)
 		and
-		    b.closeOrderStatus is null
+		    (b.closeOrderStatus is null or b.closeOrderStatus = 0)
         ORDER BY
             b.airStartTime
     </select>
@@ -84,6 +84,21 @@
             formatTime
             ) b
         LEFT JOIN tb_admin c ON b.accountBelong = c.adminName
+    </select>
+
+    <select id="getAirPort" resultType="java.util.HashMap">
+        select airPortCode,airPortCodeNote from tb_airPort
+    </select>
+
+    <select id="getUnContactList" resultType="java.lang.String">
+        select customTel from tb_order
+        where
+        orderStatus=2
+        AND (closeOrderStatus IS NULL or closeOrderStatus=0)
+        AND startOrderTime is null
+        AND inputSiteNoTime IS NULL
+        AND finishContactTime IS NULL
+        AND DATEDIFF(day,airStartTime,#{queryDate}) = 0
     </select>
 
 </mapper>
