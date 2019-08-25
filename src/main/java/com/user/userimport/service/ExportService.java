@@ -47,6 +47,12 @@ public class ExportService {
 
         logger.info("开始统计");
         XSSFWorkbook workbook = new XSSFWorkbook();
+        //获取站点数据
+        List<Map<String, Object>> airPort = exportDao.getAirPort();
+        Map<String,String> airPortMap = new HashMap<>();
+        for (Map<String, Object> map : airPort) {
+            airPortMap.put(((String)map.get("airPortCode")).trim(),((String)map.get("airPortCodeNote")).trim());
+        }
         //各种单元格样式
         Map<String,CellStyle> cellStyleMap = new HashMap<>();
         CellStyle center = ExportCellStyle.center(workbook);
@@ -61,15 +67,15 @@ public class ExportService {
         cellStyleMap.put("centerAndBold",ExportCellStyle.centerAndBold(workbook));
         cellStyleMap.put("centerAndRed",ExportCellStyle.centerAndColor(workbook,IndexedColors.RED.getIndex()));
 
-        buildQuXccxSheet(workbook,cellStyleMap,queryDate,"XCCX","携程出行总表");
-        buildQuXccxSheet(workbook,cellStyleMap,queryDate,"QU","去哪儿总表");
-        buildTcSheet(workbook,cellStyleMap,queryDate);
+        buildQuXccxSheet(workbook,cellStyleMap,queryDate,"XCCX","携程出行总表",airPortMap);
+        buildQuXccxSheet(workbook,cellStyleMap,queryDate,"QU","去哪儿总表",airPortMap);
+        buildTcSheet(workbook,cellStyleMap,queryDate,airPortMap);
         //未核销明细表：服务已经完成，但是未核销的
         buildUncheck(workbook,cellStyleMap,queryDate);
-        buildPST(workbook,cellStyleMap,queryDate,"QU","去哪儿PST",ExportConstant.airPortMap);
-        buildPST(workbook,cellStyleMap,queryDate,"XCCX","携程出行PST",ExportConstant.airPortMap);
-        buildPST(workbook,cellStyleMap,queryDate,"XC","携程PST",ExportConstant.xcPortPst);
-        buildPST(workbook,cellStyleMap,queryDate,"TCYL","同程PST",ExportConstant.tcPortPst);
+        buildPST(workbook,cellStyleMap,queryDate,"QU","去哪儿PST",airPortMap);
+        buildPST(workbook,cellStyleMap,queryDate,"XCCX","携程出行PST",airPortMap);
+        buildPST(workbook,cellStyleMap,queryDate,"XC","携程PST",airPortMap);
+        buildPST(workbook,cellStyleMap,queryDate,"TCYL","同程PST",airPortMap);
 
         logger.info("导出统计表格成功");
 
@@ -82,7 +88,7 @@ public class ExportService {
      * @param cellStyleMap 单元格样式
      * @param queryDate 统计日期
      */
-    private void buildQuXccxSheet(XSSFWorkbook workbook,Map<String,CellStyle> cellStyleMap,String queryDate,String supplyCode,String sheetName) {
+    private void buildQuXccxSheet(XSSFWorkbook workbook,Map<String,CellStyle> cellStyleMap,String queryDate,String supplyCode,String sheetName,Map<String,String> airPortMap) {
         XSSFSheet quSheet = workbook.createSheet(sheetName);
 
         //构建动态表头
@@ -91,7 +97,7 @@ public class ExportService {
         head.createCell(0).setCellValue("日期");
         //这里根据始发机场合并单元格，每四个单元格合并一个
         int startCol = 1,endCol = 4;
-        Map<String,String> airPortMap = ExportConstant.airPortMap;
+        //Map<String,String> airPortMap = ExportConstant.airPortMap;
         for(String k :airPortMap.keySet()) {
             Cell sign = second.createCell(startCol);
             quSheet.setColumnWidth(startCol,5*256);
@@ -360,7 +366,7 @@ public class ExportService {
      * @param cellStyleMap 单元格样式
      * @param queryDate 统计日期
      */
-    private void buildTcSheet(XSSFWorkbook workbook,Map<String,CellStyle> cellStyleMap,String queryDate) {
+    private void buildTcSheet(XSSFWorkbook workbook,Map<String,CellStyle> cellStyleMap,String queryDate,Map<String,String> airPortMap) {
         List<String> dateList = getDateList(queryDate);
         List<String> formatDateList = formatDate(dateList);
         Sheet tcSheet = workbook.createSheet("同程总表");
@@ -376,7 +382,7 @@ public class ExportService {
         alignRightAndYellow.setFillPattern(FillPatternType.SOLID_FOREGROUND);
         setBorder(alignRightAndYellow);
 
-        Map<String,String> airPortMap = ExportConstant.airPortMapTC;
+        //Map<String,String> airPortMap = ExportConstant.airPortMapTC;
         //表头
         int rowNum = 1;
         for(String key : airPortMap.keySet()) {
@@ -623,7 +629,7 @@ public class ExportService {
      * @param workbook
      * @param cellStyleMap
      * @param queryDate
-     * @param supplierCode
+     * @param supplierCode 供应商代码
      */
     private void buildPST(XSSFWorkbook workbook,Map<String,CellStyle> cellStyleMap,String queryDate,String supplierCode,String sheetName,Map<String,String> airPortMap){
         Sheet sheet = workbook.createSheet(sheetName);
@@ -833,5 +839,9 @@ public class ExportService {
         cellStyle.setLeftBorderColor(IndexedColors.GREY_25_PERCENT.getIndex());
         cellStyle.setRightBorderColor(IndexedColors.GREY_25_PERCENT.getIndex());
         cellStyle.setTopBorderColor(IndexedColors.GREY_25_PERCENT.getIndex());
+    }
+
+    public String getUnContactList(String queryDate) {
+        return String.join(",",exportDao.getUnContactList(queryDate));
     }
 }

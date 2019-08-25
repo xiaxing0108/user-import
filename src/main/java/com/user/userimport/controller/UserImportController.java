@@ -1,5 +1,6 @@
 package com.user.userimport.controller;
 
+import com.user.userimport.service.ExportService;
 import com.user.userimport.service.UserImportService;
 import com.user.userimport.utils.WebResult;
 import org.slf4j.Logger;
@@ -20,6 +21,8 @@ public class UserImportController {
 
     @Autowired
     private UserImportService userImportService;
+    @Autowired
+    private ExportService exportService;
 
     @RequestMapping("/userImport")
     public Map userImport(@RequestParam(name="file") MultipartFile file) {
@@ -48,6 +51,16 @@ public class UserImportController {
         } catch (Exception e) {
             logger.error("获取乘客信息列表失败");
             return WebResult.error("获取乘客信息列表失败");
+        }
+    }
+
+    @RequestMapping("/getUnContactList")
+    public Map getUnContactList(String queryDate) {
+        try {
+            return WebResult.success("success",exportService.getUnContactList(queryDate));
+        } catch (Exception e) {
+            logger.error("获取联系方式列表失败{}",e);
+            return WebResult.error("系统异常");
         }
     }
 

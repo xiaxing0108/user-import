@@ -38,4 +38,19 @@ public interface ExportDao {
     List<Map<String,Object>> PSTList(@Param("queryDate") String queryDate,
                                      @Param("supplierCode") String supplierCode,
                                      @Param("airPortCode") String airPortCode)throws DataAccessException;
+
+    /**
+     * 查询站点数据
+     * @return
+     * @throws DataAccessException
+     */
+    List<Map<String,Object>> getAirPort()throws DataAccessException;
+
+    /**
+     * 查询某一天待联系的用户手机号码
+     * @param queryDate
+     * @return
+     * @throws DataAccessException
+     */
+    List<String> getUnContactList(@Param("queryDate")String queryDate)throws DataAccessException;
 }

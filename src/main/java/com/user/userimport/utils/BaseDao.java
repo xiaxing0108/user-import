@@ -67,9 +67,9 @@ public class BaseDao {
             StringBuilder sql = new StringBuilder();
                 sql.append("insert into tb_order ");
                 sql.append("(orderNo,orderSaleNo,supplierCode,airPortCode,airNo,siteNo,serviceId,certNo,");
-                sql.append("customName,customTel,airStartTime,orderMark,addType,orderSort,orderStatus,addTime,inputCertNoTime,inputSiteNoTime) ");
+                sql.append("customName,customTel,airStartTime,orderMark,addType,orderSort,orderStatus,addTime,inputCertNoTime,inputSiteNoTime,terminal) ");
                 sql.append("values ");
-                sql.append("(?,?,?,?,?,?,?,?,?,?,?,?,2,100,?,getDate(),?,?)");
+                sql.append("(?,?,?,?,?,?,?,?,?,?,?,?,2,100,?,getDate(),?,?,?)");
             PreparedStatement ps = connection.prepareStatement(sql.toString());
             for (int i = 0; i < list.size(); i++) {
                 UrlParams urlParams = list.get(i);
@@ -88,6 +88,7 @@ public class BaseDao {
                 ps.setInt(13,urlParams.getOrderStatus());
                 ps.setString(14,urlParams.getInputCertNoTime());
                 ps.setString(15,urlParams.getInputSiteNoTime());
+                ps.setString(16,urlParams.getTerminal());
 
                 if(i%batchSize==0) {
                     ps.executeBatch();
