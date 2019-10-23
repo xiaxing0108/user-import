@@ -5,10 +5,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Component;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.List;
 import java.util.Map;
 
@@ -130,6 +127,54 @@ public class BaseDao {
             close(connection);
         }catch(Exception e){
             throw new RuntimeException("批量插入乘客信息失败{}",e);
+        }
+    }
+
+    public void getCensusData(String queryDate,
+                              String supplierCode,
+                              String airPortCode,
+                              Integer checkOrderStatus,
+                              Integer orderStatus) {
+        try{
+            Connection connection = getConnection();
+            StringBuilder sql = new StringBuilder();
+            sql.append("select convert(char(8),a.airStartTime,112) addTime, ");
+            sql.append("count(*) total ");
+            sql.append("from tb_order a right join tb_certInfo b on a.orderNo = b.orderNo ");
+            sql.append("where DATEDIFF(month, a.airStartTime, ?) = 0 ");
+            sql.append("and a.addType = 2 ");
+            sql.append("and a.supplierCode = ? and a.airPortCode = ? ");
+            if(checkOrderStatus!=null) {
+                sql.append("and a.checkOrderStatus = ? and (a.closeOrderStatus is null or a.closeOrderStatus = 0) ");
+            }
+            if(orderStatus!=null) {
+                sql.append("and a.orderStatus = ? ");
+            }
+            sql.append("and (a.deleteOrderStatus != 1 or a.deleteOrderStatus is null) ");
+            sql.append("group by convert(char(8),a.airStartTime,112)");
+            PreparedStatement ps = connection.prepareStatement(sql.toString());
+
+            ps.setString(1,queryDate);
+            ps.setString(2,supplierCode);
+            ps.setString(3,airPortCode);
+            if(checkOrderStatus!=null) {
+                ps.setInt(4,checkOrderStatus);
+                if(orderStatus!=null) {
+                    ps.setInt(5,orderStatus);
+                }
+            }else{
+                if(orderStatus!=null) {
+                    ps.setInt(4,orderStatus);
+                }
+            }
+
+            ResultSet set = ps.executeQuery();
+
+
+            close(connection);
+
+        }catch(Exception e){
+            throw new RuntimeException("查询统计数据失败{}",e);
         }
     }
 

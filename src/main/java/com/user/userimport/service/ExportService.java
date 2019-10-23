@@ -1,20 +1,24 @@
 package com.user.userimport.service;
 
 import com.user.userimport.dao.ExportDao;
+import com.user.userimport.enums.ExcelTypeEnum;
+import com.user.userimport.pojo.MainExcelData;
 import com.user.userimport.utils.ExportCellStyle;
 import constant.ExportConstant;
+import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
-import org.apache.poi.xssf.usermodel.XSSFCellStyle;
-import org.apache.poi.xssf.usermodel.XSSFSheet;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.xssf.usermodel.*;
 import org.apache.tomcat.jni.Local;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.io.File;
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.file.Paths;
 import java.sql.Timestamp;
 import java.text.DecimalFormat;
 import java.time.LocalDate;
@@ -43,7 +47,7 @@ public class ExportService {
     @Autowired
     private ExportDao exportDao;
 
-    public Workbook export(String queryDate) {
+    public Workbook export(String queryDate,Integer type) {
 
         logger.info("开始统计");
         XSSFWorkbook workbook = new XSSFWorkbook();
@@ -67,15 +71,30 @@ public class ExportService {
         cellStyleMap.put("centerAndBold",ExportCellStyle.centerAndBold(workbook));
         cellStyleMap.put("centerAndRed",ExportCellStyle.centerAndColor(workbook,IndexedColors.RED.getIndex()));
 
-        buildQuXccxSheet(workbook,cellStyleMap,queryDate,"XCCX","携程出行总表",airPortMap);
-        buildQuXccxSheet(workbook,cellStyleMap,queryDate,"QU","去哪儿总表",airPortMap);
-        buildTcSheet(workbook,cellStyleMap,queryDate,airPortMap);
-        //未核销明细表：服务已经完成，但是未核销的
-        buildUncheck(workbook,cellStyleMap,queryDate);
-        buildPST(workbook,cellStyleMap,queryDate,"QU","去哪儿PST",airPortMap);
-        buildPST(workbook,cellStyleMap,queryDate,"XCCX","携程出行PST",airPortMap);
-        buildPST(workbook,cellStyleMap,queryDate,"XC","携程PST",airPortMap);
-        buildPST(workbook,cellStyleMap,queryDate,"TCYL","同程PST",airPortMap);
+        if(type== ExcelTypeEnum.QU_ALL.getCode()) {
+            buildQuXccxSheet(workbook,cellStyleMap,queryDate,"QU","去哪儿总表",airPortMap);
+        }
+        if(type==ExcelTypeEnum.XCCX_ALL.getCode()) {
+            buildQuXccxSheet(workbook,cellStyleMap,queryDate,"XCCX","携程出行总表",airPortMap);
+        }
+        if(type==ExcelTypeEnum.TC_ALL.getCode()){
+            buildTcSheet(workbook,cellStyleMap,queryDate,airPortMap);
+        }
+        if(type==ExcelTypeEnum.UNCHECK_DETAIL.getCode()) {
+            buildUncheck(workbook,cellStyleMap,queryDate);
+        }
+        if(type==ExcelTypeEnum.QU_PST.getCode()) {
+            buildPST(workbook,cellStyleMap,queryDate,"QU","去哪儿PST",airPortMap);
+        }
+        if(type==ExcelTypeEnum.TC_PST.getCode()) {
+            buildPST(workbook,cellStyleMap,queryDate,"TCYL","同程PST",airPortMap);
+        }
+        if(type==ExcelTypeEnum.XCCX_PST.getCode()) {
+            buildPST(workbook,cellStyleMap,queryDate,"XCCX","携程出行PST",airPortMap);
+        }
+        if(type==ExcelTypeEnum.XC_PST.getCode()) {
+            buildPST(workbook,cellStyleMap,queryDate,"XC","携程PST",airPortMap);
+        }
 
         logger.info("导出统计表格成功");
 
@@ -147,11 +166,13 @@ public class ExportService {
         List<Map<String,List>> dataList = new ArrayList<>();
         for(String k: airPortMap.keySet()) {
             //总量
+            logger.info("SQL开始");
             List<Map<String, Object>> total = exportDao.getCensusData(queryDate, supplyCode, k, null,null);
             //已核销
             List<Map<String, Object>> checkSuccess = exportDao.getCensusData(queryDate, supplyCode, k, 1,3);
             //未核销
             List<Map<String, Object>> checkFail = exportDao.getCensusData(queryDate, supplyCode, k, 0,3);
+            logger.info("SQL结束");
             Map<String,List> map = new HashMap<>();
             map.put("total",total);
             map.put("checkSuccess",checkSuccess);
@@ -742,12 +763,475 @@ public class ExportService {
         return localDateTime.getMonth().getValue()+"月"+localDateTime.getDayOfMonth()+"日";
     }
 
+    public Workbook export(String queryDate) {
+        logger.info("=>开始导出");
+
+        File template = new File("D:\\template.xlsx");
+        XSSFWorkbook workbook = null;
+        try {
+            workbook = (XSSFWorkbook) WorkbookFactory.create(template);
+        } catch (Exception e) {
+            logger.error("创建表格失败");
+            throw new RuntimeException("创建表格失败");
+        }
+
+        //获取站点数据
+        List<Map<String, Object>> airPort = exportDao.getAirPort();
+        Map<String,String> airPortMap = new HashMap<>();
+        for (Map<String, Object> map : airPort) {
+            airPortMap.put(((String)map.get("airPortCode")).trim(),((String)map.get("airPortCodeNote")).trim());
+        }
+
+        Map<String,CellStyle> cellStyleMap = new HashMap<>();
+        CellStyle center = ExportCellStyle.center(workbook);
+        CellStyle alignRight = ExportCellStyle.alignRight(workbook);
+        CellStyle yellow = ExportCellStyle.colour(workbook,IndexedColors.YELLOW.getIndex());
+        cellStyleMap.put("center",center);
+        cellStyleMap.put("alignRight",alignRight);
+        cellStyleMap.put("yellow",yellow);
+        cellStyleMap.put("borderThin",ExportCellStyle.borderThin(workbook));
+        cellStyleMap.put("blue",ExportCellStyle.colour(workbook,IndexedColors.SKY_BLUE.getIndex()));
+        cellStyleMap.put("alignRightAndYellow",ExportCellStyle.alignRightAndColor(workbook,IndexedColors.YELLOW.getIndex()));
+        cellStyleMap.put("centerAndBold",ExportCellStyle.centerAndBold(workbook));
+        cellStyleMap.put("centerAndRed",ExportCellStyle.centerAndColor(workbook,IndexedColors.RED.getIndex()));
+
+        buildQuOrTccxAll(workbook,queryDate,"QU","去哪儿总表",airPortMap);
+        buildQuOrTccxAll(workbook,queryDate,"XCCX","携程出行总表",airPortMap);
+        buildTcSheet(workbook,cellStyleMap,queryDate,airPortMap);
+        buildUncheck(workbook,cellStyleMap,queryDate);
+        buildPST(workbook,cellStyleMap,queryDate,"QU","去哪儿PST",airPortMap);
+        buildPST(workbook,cellStyleMap,queryDate,"TCYL","同程PST",airPortMap);
+        buildPST(workbook,cellStyleMap,queryDate,"XCCX","携程出行PST",airPortMap);
+        buildPST(workbook,cellStyleMap,queryDate,"XC","携程PST",airPortMap);
+
+
+        logger.info("<==导出结束");
+        return workbook;
+    }
+
+    private void buildQuOrTccxAll(XSSFWorkbook workbook,String queryDate,String supplyCode,String sheetName,Map<String,String> airPortMap) {
+
+        logger.info("==>buildQuOrTccxAll开始准备数据");
+        XSSFSheet sheet = workbook.getSheet(sheetName);
+
+        Map<String,Map> dataMap = new HashMap<>();
+        logger.info("第一个for循环开始");
+        for(String k: airPortMap.keySet()) {
+            //总量
+            List<Map<String, Object>> total = exportDao.getCensusData(queryDate, supplyCode, k, null,null);
+            //已核销
+            List<Map<String, Object>> checkSuccess = exportDao.getCensusData(queryDate, supplyCode, k, 1,3);
+            //未核销
+            List<Map<String, Object>> checkFail = exportDao.getCensusData(queryDate, supplyCode, k, 0,3);
+            /*Map<String,List> map = new HashMap<>();
+            map.put("total",total);
+            map.put("checkSuccess",checkSuccess);
+            map.put("checkFail",checkFail);
+            dataList.add(map);*/
+            Map<String,Object> resultMap = new HashMap<>();
+            Map<String,Object> totalMap = new HashMap<>();
+            Map<String,Object> successMap = new HashMap<>();
+            Map<String,Object> failMap = new HashMap<>();
+            for (Map<String, Object> map : total) {
+                totalMap.put((String)map.get("addTime"),map.get("total"));
+            }
+            for (Map<String, Object> map : checkSuccess) {
+                successMap.put((String)map.get("addTime"),map.get("total"));
+            }
+            for (Map<String, Object> map : checkFail) {
+                failMap.put((String)map.get("addTime"),map.get("total"));
+            }
+            resultMap.put("total",totalMap);
+            resultMap.put("success",successMap);
+            resultMap.put("fail",failMap);
+            dataMap.put(k,resultMap);
+        }
+
+        logger.info("第一轮循环结束，开始第二轮循环");
+
+        List<String> dateList = getDateList(queryDate);
+        List<MainExcelData> mainDataList = new ArrayList<>();
+        for (String date : dateList) {
+            MainExcelData mainExcelData = new MainExcelData();
+            mainExcelData.setDate(date);
+            for(String s :dataMap.keySet()) {
+                Map<String,Object> resultMap = dataMap.get(s);
+                Map<String,Object> totalMap = (Map<String,Object>)resultMap.get("total");
+                Map<String,Object> successMap = (Map<String,Object>)resultMap.get("success");
+                Map<String,Object> failMap = (Map<String,Object>)resultMap.get("fail");
+                int totalCount = totalMap.get(date)==null?0:(int)totalMap.get(date);
+                int successCount = successMap.get(date)==null?0:(int)successMap.get(date);
+                int failCount = failMap.get(date)==null?0:(int)failMap.get(date);
+                String p = "";
+                if(totalCount!=0) {
+                    float percent = (float) (successCount+failCount)/totalCount*100;
+                    BigDecimal b = new BigDecimal(percent);
+                    p = b.setScale(2,b.ROUND_DOWN)+"%";
+                }
+                //此处的s为各个站点
+                if("PVG".equals(s)) {
+                    //上海浦东
+                    mainExcelData.setShpdAll(String.valueOf(totalCount));
+                    mainExcelData.setShpdCheck(String.valueOf(successCount));
+                    mainExcelData.setShpdNoCheck(String.valueOf(failCount));
+                    mainExcelData.setShpdPercent(p);
+                    continue;
+                }
+                if("SZX".equals(s)) {
+                    //深圳
+                    mainExcelData.setSzAll(String.valueOf(totalCount));
+                    mainExcelData.setSzCheck(String.valueOf(successCount));
+                    mainExcelData.setSzNoCheck(String.valueOf(failCount));
+                    mainExcelData.setSzPercent(p);
+                    continue;
+                }
+                if("CAN".equals(s)) {
+                    //广州
+                    mainExcelData.setGzAll(String.valueOf(totalCount));
+                    mainExcelData.setGzCheck(String.valueOf(successCount));
+                    mainExcelData.setGzNoCheck(String.valueOf(failCount));
+                    mainExcelData.setGzPercent(p);
+                    continue;
+                }
+                if("TAO".equals(s)) {
+                    //青岛
+                    mainExcelData.setQdAll(String.valueOf(totalCount));
+                    mainExcelData.setQdCheck(String.valueOf(successCount));
+                    mainExcelData.setQdNoCheck(String.valueOf(failCount));
+                    mainExcelData.setQdPercent(p);
+                    continue;
+                }
+                if("KMG".equals(s)) {
+                    //昆明
+                    mainExcelData.setKmAll(String.valueOf(totalCount));
+                    mainExcelData.setKmCheck(String.valueOf(successCount));
+                    mainExcelData.setKmNoCheck(String.valueOf(failCount));
+                    mainExcelData.setKmPercent(p);
+                    continue;
+                }
+                if("CTU".equals(s)) {
+                    //成都
+                    mainExcelData.setCdAll(String.valueOf(totalCount));
+                    mainExcelData.setCdCheck(String.valueOf(successCount));
+                    mainExcelData.setCdNoCheck(String.valueOf(failCount));
+                    mainExcelData.setCdPercent(p);
+                    continue;
+                }
+                if("PEK".equals(s)) {
+                    //北京
+                    mainExcelData.setBjAll(String.valueOf(totalCount));
+                    mainExcelData.setBjCheck(String.valueOf(successCount));
+                    mainExcelData.setBjNoCheck(String.valueOf(failCount));
+                    mainExcelData.setBjPercent(p);
+                    continue;
+                }
+                if("XIY".equals(s)) {
+                    //西安
+                    mainExcelData.setXaAll(String.valueOf(totalCount));
+                    mainExcelData.setXaCheck(String.valueOf(successCount));
+                    mainExcelData.setXaNoCheck(String.valueOf(failCount));
+                    mainExcelData.setXaPercent(p);
+                    continue;
+                }
+                if("CGO".equals(s)) {
+                    //郑州
+                    mainExcelData.setZzAll(String.valueOf(totalCount));
+                    mainExcelData.setZzCheck(String.valueOf(successCount));
+                    mainExcelData.setZzNoCheck(String.valueOf(failCount));
+                    mainExcelData.setZzPercent(p);
+                    continue;
+                }
+                if("SHA".equals(s)) {
+                    //上海虹桥
+                    mainExcelData.setShhqAll(String.valueOf(totalCount));
+                    mainExcelData.setShhqCheck(String.valueOf(successCount));
+                    mainExcelData.setShhqNoCheck(String.valueOf(failCount));
+                    mainExcelData.setShhqPercent(p);
+                    continue;
+                }
+                if("CKG".equals(s)) {
+                    //重庆
+                    mainExcelData.setCqAll(String.valueOf(totalCount));
+                    mainExcelData.setCqCheck(String.valueOf(successCount));
+                    mainExcelData.setCqNoCheck(String.valueOf(failCount));
+                    mainExcelData.setCqPercent(p);
+                    continue;
+                }
+
+            }
+            mainDataList.add(mainExcelData);
+        }
+
+        logger.info("==>buildQuOrTccxAll数据准备结束，开始填充数据");
+        int rowNum = 2;
+        CellStyle center = ExportCellStyle.center(workbook);
+        CellStyle alignRightRed = ExportCellStyle.alignRight(workbook);
+        alignRightRed.setFillForegroundColor(IndexedColors.RED.getIndex());
+        alignRightRed.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        setBorder(alignRightRed);
+        CellStyle alignRightYellow = ExportCellStyle.alignRight(workbook);
+        alignRightYellow.setFillForegroundColor(IndexedColors.YELLOW.getIndex());
+        alignRightYellow.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        setBorder(alignRightYellow);
+
+        for (MainExcelData data : mainDataList) {
+            XSSFRow row = sheet.getRow(rowNum)==null?sheet.createRow(rowNum):sheet.getRow(rowNum);
+            XSSFCell cell = row.getCell(0)==null?row.createCell(0):row.getCell(0);
+
+            cell.setCellValue(data.getDate());
+
+            //上海浦东
+            cell = row.getCell(1)==null?row.createCell(1):row.getCell(1);
+            cell.setCellStyle(center);
+            cell.setCellValue(data.getShpdAll());
+            cell = row.getCell(2)==null?row.createCell(2):row.getCell(2);
+            cell.setCellStyle(center);
+            cell.setCellValue(data.getShpdCheck());
+            cell = row.getCell(3)==null?row.createCell(3):row.getCell(3);
+            cell.setCellStyle(center);
+            cell.setCellValue(data.getShpdNoCheck());
+            cell = row.getCell(4)==null?row.createCell(4):row.getCell(4);
+            if(!"".equals(data.getShpdPercent())) {
+                if(Float.parseFloat(data.getShpdPercent().substring(0,data.getShpdPercent().length()-1))<RED_PERCENT) {
+                    cell.setCellStyle(alignRightRed);
+                }
+                if(Float.parseFloat(data.getShpdPercent().substring(0,data.getShpdPercent().length()-1))>YELLOW_PERCENT) {
+                    cell.setCellStyle(alignRightYellow);
+                }
+            }
+            cell.setCellValue(data.getShpdPercent());
+
+            //深圳
+            cell = row.getCell(5)==null?row.createCell(5):row.getCell(5);
+            cell.setCellStyle(center);
+            cell.setCellValue(data.getSzAll());
+            cell = row.getCell(6)==null?row.createCell(6):row.getCell(6);
+            cell.setCellStyle(center);
+            cell.setCellValue(data.getSzCheck());
+            cell = row.getCell(7)==null?row.createCell(7):row.getCell(7);
+            cell.setCellStyle(center);
+            cell.setCellValue(data.getSzNoCheck());
+            cell = row.getCell(8)==null?row.createCell(8):row.getCell(8);
+            if(!"".equals(data.getSzPercent())) {
+                if(Float.parseFloat(data.getSzPercent().substring(0,data.getSzPercent().length()-1))<RED_PERCENT) {
+                    cell.setCellStyle(alignRightRed);
+                }
+                if(Float.parseFloat(data.getSzPercent().substring(0,data.getSzPercent().length()-1))>YELLOW_PERCENT) {
+                    cell.setCellStyle(alignRightYellow);
+                }
+            }
+
+            cell.setCellValue(data.getSzPercent());
+
+            //广州
+            cell = row.getCell(9)==null?row.createCell(9):row.getCell(9);
+            cell.setCellStyle(center);
+            cell.setCellValue(data.getGzAll());
+            cell = row.getCell(10)==null?row.createCell(10):row.getCell(10);
+            cell.setCellStyle(center);
+            cell.setCellValue(data.getGzCheck());
+            cell = row.getCell(11)==null?row.createCell(11):row.getCell(11);
+            cell.setCellStyle(center);
+            cell.setCellValue(data.getGzNoCheck());
+            cell = row.getCell(12)==null?row.createCell(12):row.getCell(12);
+            if(!"".equals(data.getGzPercent())) {
+                if(Float.parseFloat(data.getGzPercent().substring(0,data.getGzPercent().length()-1))<RED_PERCENT) {
+                    cell.setCellStyle(alignRightRed);
+                }
+                if(Float.parseFloat(data.getGzPercent().substring(0,data.getGzPercent().length()-1))>YELLOW_PERCENT) {
+                    cell.setCellStyle(alignRightYellow);
+                }
+            }
+
+            cell.setCellValue(data.getGzPercent());
+
+            //青岛
+            cell = row.getCell(13)==null?row.createCell(13):row.getCell(13);
+            cell.setCellStyle(center);
+            cell.setCellValue(data.getQdAll());
+            cell = row.getCell(14)==null?row.createCell(14):row.getCell(14);
+            cell.setCellStyle(center);
+            cell.setCellValue(data.getQdCheck());
+            cell = row.getCell(15)==null?row.createCell(15):row.getCell(15);
+            cell.setCellStyle(center);
+            cell.setCellValue(data.getQdNoCheck());
+            cell = row.getCell(16)==null?row.createCell(16):row.getCell(16);
+
+            if(!"".equals(data.getQdPercent())) {
+                if(Float.parseFloat(data.getQdPercent().substring(0,data.getQdPercent().length()-1))<RED_PERCENT) {
+                    cell.setCellStyle(alignRightRed);
+                }
+                if(Float.parseFloat(data.getQdPercent().substring(0,data.getQdPercent().length()-1))>YELLOW_PERCENT) {
+                    cell.setCellStyle(alignRightYellow);
+                }
+            }
+            cell.setCellValue(data.getQdPercent());
+
+            //昆明
+            cell = row.getCell(17)==null?row.createCell(17):row.getCell(17);
+            cell.setCellStyle(center);
+            cell.setCellValue(data.getKmAll());
+            cell = row.getCell(18)==null?row.createCell(18):row.getCell(18);
+            cell.setCellStyle(center);
+            cell.setCellValue(data.getKmCheck());
+            cell = row.getCell(19)==null?row.createCell(19):row.getCell(19);
+            cell.setCellStyle(center);
+            cell.setCellValue(data.getKmNoCheck());
+            cell = row.getCell(20)==null?row.createCell(20):row.getCell(20);
+
+            if(!"".equals(data.getKmPercent())) {
+                if(Float.parseFloat(data.getKmPercent().substring(0,data.getKmPercent().length()-1))<RED_PERCENT) {
+                    cell.setCellStyle(alignRightRed);
+                }
+                if(Float.parseFloat(data.getKmPercent().substring(0,data.getKmPercent().length()-1))>YELLOW_PERCENT) {
+                    cell.setCellStyle(alignRightYellow);
+                }
+            }
+            cell.setCellValue(data.getKmPercent());
+
+            //成都
+            cell = row.getCell(21)==null?row.createCell(21):row.getCell(21);
+            cell.setCellStyle(center);
+            cell.setCellValue(data.getCdAll());
+            cell = row.getCell(22)==null?row.createCell(22):row.getCell(22);
+            cell.setCellStyle(center);
+            cell.setCellValue(data.getCdCheck());
+            cell = row.getCell(23)==null?row.createCell(23):row.getCell(23);
+            cell.setCellStyle(center);
+            cell.setCellValue(data.getCdNoCheck());
+            cell = row.getCell(24)==null?row.createCell(24):row.getCell(24);
+
+            if(!"".equals(data.getCdPercent())) {
+                if(Float.parseFloat(data.getCdPercent().substring(0,data.getCdPercent().length()-1))<RED_PERCENT) {
+                    cell.setCellStyle(alignRightRed);
+                }
+                if(Float.parseFloat(data.getCdPercent().substring(0,data.getCdPercent().length()-1))>YELLOW_PERCENT) {
+                    cell.setCellStyle(alignRightYellow);
+                }
+            }
+            cell.setCellValue(data.getCdPercent());
+
+            //北京
+            cell = row.getCell(25)==null?row.createCell(25):row.getCell(25);
+            cell.setCellStyle(center);
+            cell.setCellValue(data.getBjAll());
+            cell = row.getCell(26)==null?row.createCell(26):row.getCell(26);
+            cell.setCellStyle(center);
+            cell.setCellValue(data.getBjCheck());
+            cell = row.getCell(27)==null?row.createCell(27):row.getCell(27);
+            cell.setCellStyle(center);
+            cell.setCellValue(data.getBjNoCheck());
+            cell = row.getCell(28)==null?row.createCell(28):row.getCell(28);
+
+            if(!"".equals(data.getBjPercent())) {
+                if(Float.parseFloat(data.getBjPercent().substring(0,data.getBjPercent().length()-1))<RED_PERCENT) {
+                    cell.setCellStyle(alignRightRed);
+                }
+                if(Float.parseFloat(data.getBjPercent().substring(0,data.getBjPercent().length()-1))>YELLOW_PERCENT) {
+                    cell.setCellStyle(alignRightYellow);
+                }
+            }
+            cell.setCellValue(data.getBjPercent());
+
+            //西安
+            cell = row.getCell(29)==null?row.createCell(29):row.getCell(29);
+            cell.setCellStyle(center);
+            cell.setCellValue(data.getXaAll());
+            cell = row.getCell(30)==null?row.createCell(30):row.getCell(30);
+            cell.setCellStyle(center);
+            cell.setCellValue(data.getXaCheck());
+            cell = row.getCell(31)==null?row.createCell(31):row.getCell(31);
+            cell.setCellStyle(center);
+            cell.setCellValue(data.getXaNoCheck());
+            cell = row.getCell(32)==null?row.createCell(32):row.getCell(32);
+
+            if(!"".equals(data.getXaPercent())) {
+                if(Float.parseFloat(data.getXaPercent().substring(0,data.getXaPercent().length()-1))<RED_PERCENT) {
+                    cell.setCellStyle(alignRightRed);
+                }
+                if(Float.parseFloat(data.getXaPercent().substring(0,data.getXaPercent().length()-1))>YELLOW_PERCENT) {
+                    cell.setCellStyle(alignRightYellow);
+                }
+            }
+            cell.setCellValue(data.getXaPercent());
+
+            //郑州
+            cell = row.getCell(33)==null?row.createCell(33):row.getCell(33);
+            cell.setCellStyle(center);
+            cell.setCellValue(data.getZzAll());
+            cell = row.getCell(34)==null?row.createCell(34):row.getCell(34);
+            cell.setCellStyle(center);
+            cell.setCellValue(data.getZzCheck());
+            cell = row.getCell(35)==null?row.createCell(35):row.getCell(35);
+            cell.setCellStyle(center);
+            cell.setCellValue(data.getZzNoCheck());
+            cell = row.getCell(36)==null?row.createCell(36):row.getCell(36);
+
+            if(!"".equals(data.getZzPercent())) {
+                if(Float.parseFloat(data.getZzPercent().substring(0,data.getZzPercent().length()-1))<RED_PERCENT) {
+                    cell.setCellStyle(alignRightRed);
+                }
+                if(Float.parseFloat(data.getZzPercent().substring(0,data.getZzPercent().length()-1))>YELLOW_PERCENT) {
+                    cell.setCellStyle(alignRightYellow);
+                }
+            }
+            cell.setCellValue(data.getZzPercent());
+
+            //上海虹桥
+            cell = row.getCell(37)==null?row.createCell(37):row.getCell(37);
+            cell.setCellStyle(center);
+            cell.setCellValue(data.getShhqAll());
+            cell = row.getCell(38)==null?row.createCell(38):row.getCell(38);
+            cell.setCellStyle(center);
+            cell.setCellValue(data.getShhqCheck());
+            cell = row.getCell(39)==null?row.createCell(39):row.getCell(39);
+            cell.setCellStyle(center);
+            cell.setCellValue(data.getShhqNoCheck());
+            cell = row.getCell(40)==null?row.createCell(40):row.getCell(40);
+
+            if(!"".equals(data.getShhqPercent())) {
+                if(Float.parseFloat(data.getShhqPercent().substring(0,data.getShhqPercent().length()-1))<RED_PERCENT) {
+                    cell.setCellStyle(alignRightRed);
+                }
+                if(Float.parseFloat(data.getShhqPercent().substring(0,data.getShhqPercent().length()-1))>YELLOW_PERCENT) {
+                    cell.setCellStyle(alignRightYellow);
+                }
+            }
+            cell.setCellValue(data.getShhqPercent());
+
+            //重庆
+            cell = row.getCell(41)==null?row.createCell(41):row.getCell(41);
+            cell.setCellStyle(center);
+            cell.setCellValue(data.getCqAll());
+            cell = row.getCell(42)==null?row.createCell(42):row.getCell(42);
+            cell.setCellStyle(center);
+            cell.setCellValue(data.getCqCheck());
+            cell = row.getCell(43)==null?row.createCell(43):row.getCell(43);
+            cell.setCellStyle(center);
+            cell.setCellValue(data.getCqNoCheck());
+            cell = row.getCell(44)==null?row.createCell(44):row.getCell(44);
+
+            if(!"".equals(data.getCqPercent())) {
+                if(Float.parseFloat(data.getCqPercent().substring(0,data.getCqPercent().length()-1))<RED_PERCENT) {
+                    cell.setCellStyle(alignRightRed);
+                }
+                if(Float.parseFloat(data.getCqPercent().substring(0,data.getCqPercent().length()-1))>YELLOW_PERCENT) {
+                    cell.setCellStyle(alignRightYellow);
+                }
+            }
+            cell.setCellValue(data.getCqPercent());
+
+            rowNum++;
+        }
+
+        logger.info("==>buildQuOrTccxAll数据填充结束");
+    }
+
     /**
      * 返回单个日期的日月格式
      * @param date
      * @return
      */
-
     private String formatDateMD(String date) {
         LocalDate localDate = LocalDate.parse(date,DateTimeFormatter.ofPattern("yyyyMMdd"));
         return localDate.getMonth().getValue()+"月"+localDate.getDayOfMonth()+"日";
@@ -806,6 +1290,14 @@ public class ExportService {
         return formatList;
     }
 
+    public static void main(String[] args) {
+        Integer a=1,b=2,c=5;
+        float d = (a+b)/c*100;
+        float e = (float) (a+b)/c*100;
+        System.out.println(d);
+        System.out.println(e);
+    }
+
     /**
      * 月份.日期，例：5.1
      * @param date:日期格式yyyyMMdd
@@ -841,7 +1333,27 @@ public class ExportService {
         cellStyle.setTopBorderColor(IndexedColors.GREY_25_PERCENT.getIndex());
     }
 
-    public String getUnContactList(String queryDate) {
-        return String.join(",",exportDao.getUnContactList(queryDate));
+    public Map getUnContactList(String queryDate) {
+        List<Map<String, Object>> unContactList = exportDao.getUnContactList(queryDate);
+        Map<String,Object> resultMap = new HashMap<>();
+        for (Map<String, Object> map : unContactList) {
+            String customTel = (String) map.get("customTel");
+            String supplierCode = (String) map.get("supplierCode");
+            String airPortCode = (String) map.get("airPortCode");
+            if(resultMap.containsKey(supplierCode)) {
+                Map<String,Object> airPortMap = (java.util.HashMap)resultMap.get(supplierCode);
+                if(airPortMap.containsKey(airPortCode)) {
+                    airPortMap.put(airPortCode,airPortMap.get(airPortCode)+","+customTel);
+                }else {
+                    airPortMap.put(airPortCode,customTel);
+                }
+            }else{
+                Map<String,Object> airPortMap = new HashMap<>();
+                airPortMap.put(airPortCode,customTel);
+                resultMap.put(supplierCode,airPortMap);
+            }
+        }
+
+        return resultMap;
     }
 }

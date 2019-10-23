@@ -215,10 +215,13 @@ public class UserImportService {
                 int index = 1;
                 while(true) {
                     XSSFRow row = sheet.getRow(index);
-                    if(row==null) {
+                    if(row==null||row.getCell(customTelIndex)==null) {
                         break;
                     }
-                    String phone = row.getCell(customTelIndex).getStringCellValue().trim();
+                    String phone = row.getCell(customTelIndex).getStringCellValue().trim()+row.getCell(airNoIndex).getStringCellValue().trim();
+                    if(StringUtils.isEmpty(phone)) {
+                        break;
+                    }
                     String customName = row.getCell(customNameIndex).getStringCellValue().trim();
                     String cardNo = row.getCell(certNoIndex).getStringCellValue().trim();
                     if(map.containsKey(phone)) {
@@ -229,21 +232,22 @@ public class UserImportService {
                         UrlParams urlParams = new UrlParams();
                         try {
                             urlParams.setAirStartTime(row.getCell(airStartTimeIndex).getStringCellValue());
+                            urlParams.setAirNo(row.getCell(airNoIndex).getStringCellValue());
+                            urlParams.setAirPortCode(row.getCell(airPortCodeIndex).getStringCellValue());
+                            urlParams.setCustomTel(row.getCell(customTelIndex).getStringCellValue().trim());
+                            urlParams.setCustomName(customName);
+                            urlParams.setCertNo(customName+":"+cardNo);
+                            urlParams.setSupplierCode(supplierCode);
+                            urlParams.setOrderSaleNo(phone);
+                            urlParams.setServiceId("1");
                         } catch (Exception e) {
-                            logger.error("航班日期格式错误{}",e);
+                            logger.error("航班信息错误{}",e);
                             Map<String,Object> errorMap = new HashMap<>();
-                            errorMap.put(phone,"航班日期格式错误");
+                            errorMap.put(phone,"航班信息错误");
                             errorList.add(errorMap);
                             index++;
                             continue;
                         }
-                        urlParams.setAirNo(row.getCell(airNoIndex).getStringCellValue());
-                        urlParams.setAirPortCode(row.getCell(airPortCodeIndex).getStringCellValue());
-                        urlParams.setCustomTel(phone);
-                        urlParams.setCustomName(customName);
-                        urlParams.setCertNo(customName+":"+cardNo);
-                        urlParams.setSupplierCode(supplierCode);
-                        urlParams.setOrderSaleNo(phone);
                         map.put(phone,urlParams);
                     }
                     index++;
@@ -254,6 +258,9 @@ public class UserImportService {
                 while(true) {
                     XSSFRow row = sheet.getRow(index);
                     if(row==null) {
+                        break;
+                    }
+                    if(row.getCell(orderSaleNoIndex)==null) {
                         break;
                     }
                     String orderNo = row.getCell(orderSaleNoIndex).getStringCellValue().trim();
@@ -272,29 +279,29 @@ public class UserImportService {
                         try {
                             String orderDate = orderDateCell.getStringCellValue();
                             urlParams.setAirStartTime(orderDate);
+                            if(airNoIndex>=0) {
+                                urlParams.setAirNo(row.getCell(airNoIndex).getStringCellValue().trim());
+                            }
+                            if(customNameIndex>=0) {
+                                urlParams.setCustomName(row.getCell(customNameIndex).getStringCellValue().trim());
+                            }
+                            urlParams.setAirPortCode(row.getCell(airPortCodeIndex).getStringCellValue().trim());
+                            urlParams.setCustomTel(row.getCell(customTelIndex).getStringCellValue().trim());
+                            String certNo = row.getCell(certNoIndex).getStringCellValue().trim();
+                            if(!certNo.contains("*")) {
+                                urlParams.setCertNo(row.getCell(customNameIndex).getStringCellValue().trim()+":"+certNo);
+                            }
+                            if(orderMarkIndex>=0) {
+                                String orderMark = row.getCell(orderMarkIndex).getStringCellValue().trim();
+                                urlParams.setOrderMark(orderMark);
+                            }
                         } catch (Exception e) {
-                            logger.error("航班日期格式错误{}",e);
+                            logger.error("航班信息错误{}",e);
                             Map<String,Object> errorMap = new HashMap<>();
-                            errorMap.put(orderNo,"航班日期格式错误");
+                            errorMap.put(orderNo,"航班信息错误");
                             errorList.add(errorMap);
                             index++;
                             continue;
-                        }
-                        if(airNoIndex>=0) {
-                            urlParams.setAirNo(row.getCell(airNoIndex).getStringCellValue().trim());
-                        }
-                        if(customNameIndex>=0) {
-                            urlParams.setCustomName(row.getCell(customNameIndex).getStringCellValue().trim());
-                        }
-                        urlParams.setAirPortCode(row.getCell(airPortCodeIndex).getStringCellValue().trim());
-                        urlParams.setCustomTel(row.getCell(customTelIndex).getStringCellValue().trim());
-                        String certNo = row.getCell(certNoIndex).getStringCellValue().trim();
-                        if(!certNo.contains("*")) {
-                            urlParams.setCertNo(row.getCell(customNameIndex).getStringCellValue().trim()+":"+certNo);
-                        }
-                        if(orderMarkIndex>=0) {
-                            String orderMark = row.getCell(orderMarkIndex).getStringCellValue().trim();
-                            urlParams.setOrderMark(orderMark);
                         }
                         map.put(orderNo,urlParams);
                     }
@@ -306,7 +313,7 @@ public class UserImportService {
             int index = 1;
             while(true) {
                 XSSFRow row = sheet.getRow(index);
-                if(row==null) {
+                if(row==null||row.getCell(orderSaleNoIndex)==null) {
                     break;
                 }
                 String orderNo = row.getCell(orderSaleNoIndex).getStringCellValue().trim();
@@ -351,29 +358,29 @@ public class UserImportService {
                         }else{
                             orderDate = orderDateCell.getStringCellValue().trim().substring(0,16).replaceAll("-","/");
                         }
+                        urlParams.setAirStartTime(orderDate);
+                        if(airNoIndex>=0) {
+                            urlParams.setAirNo(row.getCell(airNoIndex).getStringCellValue().trim());
+                        }
+                        if(customNameIndex>=0) {
+                            urlParams.setCustomName(row.getCell(customNameIndex).getStringCellValue().trim());
+                        }
+                        urlParams.setAirPortCode(row.getCell(airPortCodeIndex).getStringCellValue().trim());
+                        urlParams.setCustomTel(row.getCell(customTelIndex).getStringCellValue().trim());
+                        String certNo = row.getCell(certNoIndex).getStringCellValue().trim();
+                        if(!certNo.contains("*")) {
+                            urlParams.setCertNo(row.getCell(customNameIndex).getStringCellValue().trim()+":"+certNo);
+                        }
+                        String orderMark = "1人："+row.getCell(customNameIndex).getStringCellValue().trim();
+                        urlParams.setOrderMark(orderMark);
                     } catch (Exception e) {
-                        logger.error("航班日期错误{}",e);
+                        logger.error("航班信息错误{}",e);
                         Map<String,Object> errorMap = new HashMap();
-                        errorMap.put(orderNo,"航班日期格式错误");
+                        errorMap.put(orderNo,"航班信息错误");
                         errorList.add(errorMap);
                         index++;
                         continue;
                     }
-                    urlParams.setAirStartTime(orderDate);
-                    if(airNoIndex>=0) {
-                        urlParams.setAirNo(row.getCell(airNoIndex).getStringCellValue().trim());
-                    }
-                    if(customNameIndex>=0) {
-                        urlParams.setCustomName(row.getCell(customNameIndex).getStringCellValue().trim());
-                    }
-                    urlParams.setAirPortCode(row.getCell(airPortCodeIndex).getStringCellValue().trim());
-                    urlParams.setCustomTel(row.getCell(customTelIndex).getStringCellValue().trim());
-                    String certNo = row.getCell(certNoIndex).getStringCellValue().trim();
-                    if(!certNo.contains("*")) {
-                        urlParams.setCertNo(row.getCell(customNameIndex).getStringCellValue().trim()+":"+certNo);
-                    }
-                    String orderMark = "1人："+row.getCell(customNameIndex).getStringCellValue().trim();
-                    urlParams.setOrderMark(orderMark);
                     map.put(orderNo,urlParams);
                 }
                 index ++;
@@ -386,7 +393,7 @@ public class UserImportService {
             int index = 1;
             while(true) {
                 XSSFRow row = sheet.getRow(index);
-                if(row==null) {
+                if(row==null||row.getCell(orderSaleNoIndex)==null) {
                     break;
                 }
                 String orderNo = row.getCell(orderSaleNoIndex).getStringCellValue().trim();
@@ -414,26 +421,26 @@ public class UserImportService {
                     try {
                         String startDate = DateUtils.dateToString(startDateCell.getDateCellValue(),"yyyy/MM/dd")+" "+DateUtils.dateToString(startTimeCell.getDateCellValue(),"HH:mm");
                         urlParams.setAirStartTime(startDate);
+                        if(airNoIndex>=0) {
+                            urlParams.setAirNo(row.getCell(airNoIndex).getStringCellValue().trim());
+                        }
+                        urlParams.setAirPortCode(row.getCell(airPortCodeIndex).getStringCellValue().trim());
+                        if(customNameIndex>=0) {
+                            urlParams.setCustomName(row.getCell(customNameIndex).getStringCellValue().trim());
+                        }
+                        urlParams.setCustomTel(row.getCell(customTelIndex).getStringCellValue().trim());
+                        //String orderMark = "1人"+row.getCell(customNameIndex).getStringCellValue().trim()+";"+row.getCell(orderMarkIndex).getStringCellValue().trim();
+                        if(orderMarkIndex>=0) {
+                            String orderMark = row.getCell(orderMarkIndex).getStringCellValue().trim();
+                            urlParams.setOrderMark(orderMark);
+                        }
                     } catch (Exception e) {
-                        logger.error("航班日期格式错误{}",e);
+                        logger.error("航班信息错误{}",e);
                         Map<String,Object> errorMp = new HashMap<>();
-                        errorMp.put(orderNo,"航班日期格式错误");
+                        errorMp.put(orderNo,"航班信息错误");
                         errorList.add(errorMp);
                         index++;
                         continue;
-                    }
-                    if(airNoIndex>=0) {
-                        urlParams.setAirNo(row.getCell(airNoIndex).getStringCellValue().trim());
-                    }
-                    urlParams.setAirPortCode(row.getCell(airPortCodeIndex).getStringCellValue().trim());
-                    if(customNameIndex>=0) {
-                        urlParams.setCustomName(row.getCell(customNameIndex).getStringCellValue().trim());
-                    }
-                    urlParams.setCustomTel(row.getCell(customTelIndex).getStringCellValue().trim());
-                    //String orderMark = "1人"+row.getCell(customNameIndex).getStringCellValue().trim()+";"+row.getCell(orderMarkIndex).getStringCellValue().trim();
-                    if(orderMarkIndex>=0) {
-                        String orderMark = row.getCell(orderMarkIndex).getStringCellValue().trim();
-                        urlParams.setOrderMark(orderMark);
                     }
                     map.put(orderNo,urlParams);
                 }
@@ -494,7 +501,7 @@ public class UserImportService {
                         continue;
                     }
 
-                    if(userImportDao.existsXccxOrder(urlParams.getAirStartTime(),urlParams.getCustomTel())!=null) {
+                    if(userImportDao.existsXccxOrder(urlParams.getAirStartTime(),s)!=null) {
                         errorMap.put(urlParams.getCustomTel(),"订单已经存在，不可重复添加!");
                         errorList.add(errorMap);
                         continue;
@@ -616,7 +623,6 @@ public class UserImportService {
                     }
                 }
             }
-
             //批量插入数据
             baseDao.batchInsertOrder(orderList);
             baseDao.batchInsertCertInfo(paramsMapList);

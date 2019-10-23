@@ -77,7 +77,7 @@
     </select>
 
     <select id="existsXccxOrder" resultType="java.lang.Integer">
-        select orderId from tb_order where airStartTime = #{airStartTime} and customTel = #{phone}
+        select orderId from tb_order where airStartTime = #{airStartTime} and orderSaleNo = #{phone}
     </select>
 
 

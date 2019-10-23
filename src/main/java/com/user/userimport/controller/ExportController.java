@@ -25,7 +25,21 @@ public class ExportController {
     private ExportService exportService;
 
     @RequestMapping("/export")
-    public void export(String queryDate, HttpServletResponse response) {
+    public void export(String queryDate,Integer type, HttpServletResponse response) {
+        Workbook workbook = exportService.export(queryDate,type);
+        LocalDate date = LocalDate.parse(queryDate, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+        String fileName = date.getMonth().getValue()+"月统计报表.xlsx";
+        setResponseHeader(response,fileName);
+        try(OutputStream os = response.getOutputStream()){
+            workbook.write(os);
+            os.flush();
+        }catch(Exception e){
+            logger.error("导出统计报表失败{}",e);
+        }
+    }
+
+    @RequestMapping("/exportTest")
+    public void exportTest(String queryDate, HttpServletResponse response) {
         Workbook workbook = exportService.export(queryDate);
         LocalDate date = LocalDate.parse(queryDate, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
         String fileName = date.getMonth().getValue()+"月统计报表.xlsx";

@@ -5,23 +5,47 @@
 <mapper namespace="com.user.userimport.dao.ExportDao">
 
     <select id="getCensusData" resultType="java.util.HashMap">
+        select
+        convert(char(8),a.airStartTime,112) addTime
+				from tb_order a
+				right join tb_certInfo b
+				on a.orderNo = b.orderNo
+				where DATEDIFF(month, a.airStartTime, #{queryDate}) = 0
+				and a.addType = 2
+				and a.supplierCode = #{supplierCode}
+				and a.airPortCode = #{airPortCode}
+                <if test="checkOrderStatus!=null">
+                    and a.checkOrderStatus = #{checkOrderStatus}
+                </if>
+                <if test="checkOrderStatus!=null">
+                    and (a.closeOrderStatus = 0 or a.closeOrderStatus is null)
+                </if>
+                <if test="orderStatus!=null">
+                    and a.orderStatus = ${orderStatus}
+                </if>
+                and (a.deleteOrderStatus =0 or a.deleteOrderStatus is null)
+
+
+    </select>
+
+    <select id="getCensusDataTest" resultType="com.user.userimport.pojo.CensusData">
         select convert(char(8),a.airStartTime,112) addTime,
         count(*) total
         from tb_order a
         right join tb_certInfo b
         on a.orderNo = b.orderNo
-        where DATEDIFF(month, a.airStartTime, #{queryDate}) = 0
+        where DATEDIFF(month, a.airStartTime, ${queryDate}) = 0
         and a.addType = 2
-        and a.supplierCode = #{supplierCode}
-        and a.airPortCode = #{airPortCode}
+        and a.supplierCode = ${supplierCode}
+        and a.airPortCode = ${airPortCode}
         <if test="checkOrderStatus!=null">
-            and a.checkOrderStatus = #{checkOrderStatus}
-            and (a.closeOrderStatus is null or a.closeOrderStatus = 0)
+            and a.checkOrderStatus = ${checkOrderStatus}
+            and a.closeOrderStatus = 0
         </if>
         <if test="orderStatus!=null">
-            and a.orderStatus = #{orderStatus}
+            and a.orderStatus = ${orderStatus}
         </if>
-        and (a.deleteOrderStatus != 1 or a.deleteOrderStatus is null)
+        and a.deleteOrderStatus = 0
         group by convert(char(8),a.airStartTime,112)
     </select>
 
@@ -46,9 +70,11 @@
         AND
 			b.orderStatus = 3
 		AND
-		    (b.deleteOrderStatus != 1 or b.deleteOrderStatus is null)
+		    b.supplierCode = 'QU'
+		AND
+		    b.deleteOrderStatus = 0
 		and
-		    (b.closeOrderStatus is null or b.closeOrderStatus = 0)
+		    b.closeOrderStatus = 0
         ORDER BY
             b.airStartTime
     </select>
@@ -77,7 +103,7 @@
             AND orderStatus = 3
             AND airPortCode = #{airPortCode}
             AND addType = 2
-            and (deleteOrderStatus != 1 or deleteOrderStatus is null)
+            and deleteOrderStatus = 0
             ) a
         GROUP BY
             accountBelong,
@@ -90,11 +116,11 @@
         select airPortCode,airPortCodeNote from tb_airPort
     </select>
 
-    <select id="getUnContactList" resultType="java.lang.String">
-        select customTel from tb_order
+    <select id="getUnContactList" resultType="java.util.HashMap">
+        select customTel,supplierCode,airPortCode from tb_order
         where
         orderStatus=2
-        AND (closeOrderStatus IS NULL or closeOrderStatus=0)
+        AND closeOrderStatus=0
         AND startOrderTime is null
         AND inputSiteNoTime IS NULL
         AND finishContactTime IS NULL

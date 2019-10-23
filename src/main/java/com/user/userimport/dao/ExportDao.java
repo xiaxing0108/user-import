@@ -1,5 +1,6 @@
 package com.user.userimport.dao;
 
+import com.user.userimport.pojo.CensusData;
 import com.user.userimport.pojo.UncheckPassenger;
 import org.apache.ibatis.annotations.Param;
 import org.springframework.dao.DataAccessException;
@@ -22,6 +23,19 @@ public interface ExportDao {
                                            @Param("airPortCode") String airPortCode,
                                            @Param("checkOrderStatus") Integer checkOrderStatus,
                                            @Param("orderStatus") Integer orderStatus)throws DataAccessException;
+
+    /**
+     * 获取统计数据
+     * @param queryDate 需要查询的月份的任意一天
+     * @param supplierCode 供应商代码
+     * @param airPortCode 出发机场三字码
+     * @return
+     */
+    List<CensusData> getCensusDataTest(@Param("queryDate") String queryDate,
+                                       @Param("supplierCode") String supplierCode,
+                                       @Param("airPortCode") String airPortCode,
+                                       @Param("checkOrderStatus") Integer checkOrderStatus,
+                                       @Param("orderStatus") Integer orderStatus)throws DataAccessException;
 
     /**
      * 获取未核销的乘客列表
@@ -52,5 +66,5 @@ public interface ExportDao {
      * @return
      * @throws DataAccessException
      */
-    List<String> getUnContactList(@Param("queryDate")String queryDate)throws DataAccessException;
+    List<Map<String,Object>> getUnContactList(@Param("queryDate")String queryDate)throws DataAccessException;
 }

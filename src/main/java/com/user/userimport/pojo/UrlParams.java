@@ -159,4 +159,26 @@ public class UrlParams {
         this.siteNo = siteNo;
     }
 
+    @Override
+    public String toString() {
+        return "UrlParams{" +
+                "orderId=" + orderId +
+                ", orderNo='" + orderNo + '\'' +
+                ", orderSaleNo='" + orderSaleNo + '\'' +
+                ", supplierCode='" + supplierCode + '\'' +
+                ", serviceId='" + serviceId + '\'' +
+                ", airStartTime='" + airStartTime + '\'' +
+                ", airNo='" + airNo + '\'' +
+                ", airPortCode='" + airPortCode + '\'' +
+                ", customName='" + customName + '\'' +
+                ", customTel='" + customTel + '\'' +
+                ", certNo='" + certNo + '\'' +
+                ", orderMark='" + orderMark + '\'' +
+                ", siteNo='" + siteNo + '\'' +
+                ", orderStatus=" + orderStatus +
+                ", inputCertNoTime='" + inputCertNoTime + '\'' +
+                ", inputSiteNoTime='" + inputSiteNoTime + '\'' +
+                ", terminal='" + terminal + '\'' +
+                '}';
+    }
 }
