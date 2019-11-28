@@ -71,30 +71,30 @@ public class ExportService {
         cellStyleMap.put("centerAndBold",ExportCellStyle.centerAndBold(workbook));
         cellStyleMap.put("centerAndRed",ExportCellStyle.centerAndColor(workbook,IndexedColors.RED.getIndex()));
 
-        if(type== ExcelTypeEnum.QU_ALL.getCode()) {
+        //if(type== ExcelTypeEnum.QU_ALL.getCode()) {
             buildQuXccxSheet(workbook,cellStyleMap,queryDate,"QU","去哪儿总表",airPortMap);
-        }
-        if(type==ExcelTypeEnum.XCCX_ALL.getCode()) {
+        //}
+        //if(type==ExcelTypeEnum.XCCX_ALL.getCode()) {
             buildQuXccxSheet(workbook,cellStyleMap,queryDate,"XCCX","携程出行总表",airPortMap);
-        }
-        if(type==ExcelTypeEnum.TC_ALL.getCode()){
+        //}
+        //if(type==ExcelTypeEnum.TC_ALL.getCode()){
             buildTcSheet(workbook,cellStyleMap,queryDate,airPortMap);
-        }
-        if(type==ExcelTypeEnum.UNCHECK_DETAIL.getCode()) {
+        //}
+        //if(type==ExcelTypeEnum.UNCHECK_DETAIL.getCode()) {
             buildUncheck(workbook,cellStyleMap,queryDate);
-        }
-        if(type==ExcelTypeEnum.QU_PST.getCode()) {
+        //}
+        //if(type==ExcelTypeEnum.QU_PST.getCode()) {
             buildPST(workbook,cellStyleMap,queryDate,"QU","去哪儿PST",airPortMap);
-        }
-        if(type==ExcelTypeEnum.TC_PST.getCode()) {
+        //}
+        //if(type==ExcelTypeEnum.TC_PST.getCode()) {
             buildPST(workbook,cellStyleMap,queryDate,"TCYL","同程PST",airPortMap);
-        }
-        if(type==ExcelTypeEnum.XCCX_PST.getCode()) {
+        //}
+        //if(type==ExcelTypeEnum.XCCX_PST.getCode()) {
             buildPST(workbook,cellStyleMap,queryDate,"XCCX","携程出行PST",airPortMap);
-        }
-        if(type==ExcelTypeEnum.XC_PST.getCode()) {
+        //}
+        //if(type==ExcelTypeEnum.XC_PST.getCode()) {
             buildPST(workbook,cellStyleMap,queryDate,"XC","携程PST",airPortMap);
-        }
+        //}
 
         logger.info("导出统计表格成功");
 
@@ -166,17 +166,15 @@ public class ExportService {
         List<Map<String,List>> dataList = new ArrayList<>();
         for(String k: airPortMap.keySet()) {
             //总量
-            logger.info("SQL开始");
-            List<Map<String, Object>> total = exportDao.getCensusData(queryDate, supplyCode, k, null,null);
+            List<String> total = exportDao.getCensusData(queryDate, supplyCode, k, null,null);
             //已核销
-            List<Map<String, Object>> checkSuccess = exportDao.getCensusData(queryDate, supplyCode, k, 1,3);
+            List<String> checkSuccess = exportDao.getCensusData(queryDate, supplyCode, k, 1,3);
             //未核销
-            List<Map<String, Object>> checkFail = exportDao.getCensusData(queryDate, supplyCode, k, 0,3);
-            logger.info("SQL结束");
+            List<String> checkFail = exportDao.getCensusData(queryDate, supplyCode, k, 0,3);
             Map<String,List> map = new HashMap<>();
-            map.put("total",total);
-            map.put("checkSuccess",checkSuccess);
-            map.put("checkFail",checkFail);
+            map.put("total",listToMapList(total));
+            map.put("checkSuccess",listToMapList(checkSuccess));
+            map.put("checkFail",listToMapList(checkFail));
             dataList.add(map);
         }
 
@@ -440,12 +438,12 @@ public class ExportService {
         List<Map<String,List>> dataList = new ArrayList<>();
         for(String k: airPortMap.keySet()) {
             //派单人数
-            List<Map<String, Object>> total = exportDao.getCensusData(queryDate, "TCYL", k, null,null);
+            List<String> total = exportDao.getCensusData(queryDate, "TCYL", k, null,null);
             //完成人数
-            List<Map<String, Object>> done = exportDao.getCensusData(queryDate, "TCYL", k, null,3);
+            List<String> done = exportDao.getCensusData(queryDate, "TCYL", k, null,3);
             Map<String,List> map = new HashMap<>();
-            map.put("total",total);
-            map.put("done",done);
+            map.put("total",listToMapList(total));
+            map.put("done",listToMapList(done));
             dataList.add(map);
         }
         Row head = tcSheet.createRow(0);
@@ -818,16 +816,19 @@ public class ExportService {
         logger.info("第一个for循环开始");
         for(String k: airPortMap.keySet()) {
             //总量
-            List<Map<String, Object>> total = exportDao.getCensusData(queryDate, supplyCode, k, null,null);
+            List<String> totalS = exportDao.getCensusData(queryDate, supplyCode, k, null,null);
             //已核销
-            List<Map<String, Object>> checkSuccess = exportDao.getCensusData(queryDate, supplyCode, k, 1,3);
+            List<String> checkSuccessS = exportDao.getCensusData(queryDate, supplyCode, k, 1,3);
             //未核销
-            List<Map<String, Object>> checkFail = exportDao.getCensusData(queryDate, supplyCode, k, 0,3);
+            List<String> checkFailS = exportDao.getCensusData(queryDate, supplyCode, k, 0,3);
             /*Map<String,List> map = new HashMap<>();
             map.put("total",total);
             map.put("checkSuccess",checkSuccess);
             map.put("checkFail",checkFail);
             dataList.add(map);*/
+            List<Map<String,Object>> total = listToMapList(totalS);
+            List<Map<String,Object>> checkSuccess = listToMapList(checkSuccessS);
+            List<Map<String,Object>> checkFail = listToMapList(checkFailS);
             Map<String,Object> resultMap = new HashMap<>();
             Map<String,Object> totalMap = new HashMap<>();
             Map<String,Object> successMap = new HashMap<>();
@@ -1355,5 +1356,18 @@ public class ExportService {
         }
 
         return resultMap;
+    }
+
+    private List<Map<String,Object>> listToMapList(List<String> list) {
+        List<Map<String,Object>> resultList = new ArrayList<>();
+        Set<String> set = new HashSet<>(list);
+        set.forEach(s->{
+            Map<String,Object> map = new HashMap<>();
+            map.put("addTime",s);
+            map.put("total",Collections.frequency(list,s));
+            resultList.add(map);
+        });
+
+        return resultList;
     }
 }

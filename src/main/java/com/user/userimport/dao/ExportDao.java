@@ -18,7 +18,7 @@ public interface ExportDao {
      * @param airPortCode 出发机场三字码
      * @return
      */
-    List<Map<String,Object>> getCensusData(@Param("queryDate") String queryDate,
+    List<String> getCensusData(@Param("queryDate") String queryDate,
                                            @Param("supplierCode") String supplierCode,
                                            @Param("airPortCode") String airPortCode,
                                            @Param("checkOrderStatus") Integer checkOrderStatus,
